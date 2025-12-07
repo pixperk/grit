@@ -551,7 +551,7 @@ impl Provider for YoutubeProvider {
         }
 
         let videos_url = format!(
-            "{}/videos?part=contentDetails&id={}",
+            "{}/videos?part=snippet,contentDetails&id={}",
             API_BASE,
             video_ids.join(",")
         );
@@ -564,15 +564,15 @@ impl Provider for YoutubeProvider {
             .zip(videos_resp.items.iter())
             .map(|(item, video)| {
                 let duration_ms = Self::parse_iso8601_duration(&video.content_details.duration);
-                let artist = item
+                let artist = video
                     .snippet
-                    .video_owner_channel_title
+                    .channel_title
                     .clone()
                     .unwrap_or_else(|| "Unknown".to_string());
 
                 Track {
                     id: item.id.video_id.clone(),
-                    name: item.snippet.title.clone(),
+                    name: video.snippet.title.clone(),
                     artists: vec![artist],
                     duration_ms,
                     provider: ProviderKind::Youtube,
