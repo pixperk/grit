@@ -15,7 +15,8 @@ pub trait Provider: Send + Sync {
     /// Get playable URL for a track
     async fn playable_url(&self, track: &Track) -> anyhow::Result<String>;
 
-    /// Search for tracks by query
+    /// Fetch Tracks
+    async fn fetch_track(&self, track_id: &str) -> anyhow::Result<Track>;
     async fn search_by_query(&self, query: &str) -> anyhow::Result<Vec<Track>>;
 
     // OAuth

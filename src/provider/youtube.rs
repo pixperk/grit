@@ -88,8 +88,16 @@ struct YoutubeVideoResponse {
 #[derive(Deserialize)]
 struct YoutubeVideo {
     id: String,
+    snippet: YoutubeVideoSnippet,
     #[serde(rename = "contentDetails")]
     content_details: YoutubeVideoContentDetails,
+}
+
+#[derive(Deserialize)]
+struct YoutubeVideoSnippet {
+    title: String,
+    #[serde(rename = "channelTitle")]
+    channel_title: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -554,6 +562,33 @@ impl Provider for YoutubeProvider {
             .collect();
 
         Ok(tracks)
+    }
+
+    async fn fetch_track(&self, track_id: &str) -> Result<Track> {
+        let token = self.get_token().await?;
+        let url = format!(
+            "{}/videos?part=snippet,contentDetails&id={}",
+            API_BASE, track_id
+        );
+
+        let resp: YoutubeVideoResponse = self.api_get(&url, &token).await?;
+
+        let video = resp.items.into_iter().next().context("Track not found")?;
+
+        let duration_ms = Self::parse_iso8601_duration(&video.content_details.duration);
+        let artist = video
+            .snippet
+            .channel_title
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        Ok(Track {
+            id: track_id.to_string(),
+            name: video.snippet.title,
+            artists: vec![artist],
+            duration_ms,
+            provider: ProviderKind::Youtube,
+            metadata: None,
+        })
     }
 
     async fn can_modify_playlist(&self, playlist_id: &str) -> Result<bool> {

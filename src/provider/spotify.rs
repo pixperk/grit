@@ -413,6 +413,22 @@ impl Provider for SpotifyProvider {
         Ok(tracks)
     }
 
+    async fn fetch_track(&self, track_id: &str) -> Result<Track> {
+        let token = self.get_token().await?;
+        let url = format!("{}/tracks/{}", API_BASE, track_id);
+
+        let track: SpotifyTrackObject = self.api_get(&url, &token).await?;
+
+        Ok(Track {
+            id: track.id,
+            name: track.name,
+            artists: track.artists.into_iter().map(|a| a.name).collect(),
+            duration_ms: track.duration_ms,
+            provider: ProviderKind::Spotify,
+            metadata: None,
+        })
+    }
+
     async fn can_modify_playlist(&self, playlist_id: &str) -> Result<bool> {
         let token = self.get_token().await?;
 
