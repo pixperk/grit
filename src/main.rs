@@ -23,6 +23,30 @@ async fn main() -> anyhow::Result<()> {
             let provider = provider.or(cli.provider).unwrap_or(ProviderKind::Spotify);
             cli::commands::init::run(provider, &playlist, &plr_dir).await?;
         }
+        Commands::Search { query } => {
+            cli::commands::staging::search(&query, cli.provider, &plr_dir).await?;
+        }
+        Commands::Add { track_id } => {
+            cli::commands::staging::add(&track_id, cli.playlist.as_deref(), &plr_dir).await?;
+        }
+        Commands::Remove { track_id } => {
+            cli::commands::staging::remove(&track_id, cli.playlist.as_deref(), &plr_dir).await?;
+        }
+        Commands::Move {
+            track_id,
+            new_index,
+        } => {
+            cli::commands::staging::move_track(
+                &track_id,
+                new_index,
+                cli.playlist.as_deref(),
+                &plr_dir,
+            )
+            .await?;
+        }
+        /* Commands::Commit { message } => {
+            cli::commands::staging::commit(&message, cli.playlist.as_deref(), &plr_dir).await?;
+        } */
         _ => {
             println!("{:?}", cli.command);
         }
