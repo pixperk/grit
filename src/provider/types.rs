@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use clap::ValueEnum;
 
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 pub enum ProviderKind{
     Spotify,
     Youtube
