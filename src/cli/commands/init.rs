@@ -1,5 +1,5 @@
 use crate::provider::{Provider, ProviderKind, SpotifyProvider, YoutubeProvider};
-use crate::state::{credentials, journal, snapshot};
+use crate::state::{credentials, journal, snapshot, JournalEntry, Operation};
 use anyhow::{Context, Result};
 use std::path::Path;
 
@@ -70,10 +70,9 @@ pub async fn run(provider: ProviderKind, playlist: &str, plr_dir: &Path) -> Resu
     snapshot::save(&playlist, &snapshot_path)?;
     let hash = snapshot::compute_hash(&playlist)?;
 
-    let journal_path = journal::JournalEntry::journal_path(plr_dir, &playlist_id);
-    let entry =
-        journal::JournalEntry::new(journal::Operation::Init, hash, playlist.tracks.len(), 0, 0);
-    journal::JournalEntry::append(&journal_path, &entry)?;
+    let journal_path = JournalEntry::journal_path(plr_dir, &playlist_id);
+    let entry = JournalEntry::new(Operation::Init, hash, playlist.tracks.len(), 0, 0);
+    JournalEntry::append(&journal_path, &entry)?;
 
     println!("\nPlaylist initialized!");
     println!("  Snapshot: {:?}", snapshot_path);
