@@ -80,6 +80,11 @@ async fn main() -> anyhow::Result<()> {
         Commands::Commit { message } => {
             cli::commands::staging::commit(&message, cli.playlist.as_deref(), &plr_dir).await?;
         }
+        Commands::Push { playlist } => {
+            cli::commands::vcs::push(playlist.as_deref().or(cli.playlist.as_deref()), &plr_dir)
+                .await?;
+        }
+
         _ => {
             println!("{:?}", cli.command);
         }

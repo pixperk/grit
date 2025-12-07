@@ -34,8 +34,7 @@ pub enum Commands {
     },
     /// Pull latest changes from remote
     Pull,
-    /// Push local changes to remote
-    Push,
+
     /// Show sync status
     Status {
         /// Playlist ID or use --playlist
@@ -79,7 +78,12 @@ pub enum Commands {
         #[arg(short, long)]
         message: String,
     },
-
+    /// Push local changes to remote
+    Push {
+        /// Playlist ID to push
+        #[arg(short = 'l', long)]
+        playlist: Option<String>,
+    },
     Diff {
         /// Show only staged changes
         #[arg(long)]

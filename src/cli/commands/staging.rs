@@ -2,37 +2,12 @@ use anyhow::{bail, Context, Ok, Result};
 use std::path::Path;
 
 use crate::{
-    provider::{Provider, ProviderKind, SpotifyProvider, TrackChange, YoutubeProvider},
+    cli::commands::utils::create_provider,
+    provider::{ProviderKind, TrackChange},
     state::{
-        apply_patch, clear_staged, credentials, load_staged, snapshot, stage_change, JournalEntry,
-        Operation,
+        apply_patch, clear_staged, load_staged, snapshot, stage_change, JournalEntry, Operation,
     },
 };
-
-fn create_provider(provider_kind: ProviderKind, plr_dir: &Path) -> Result<Box<dyn Provider>> {
-    let token = credentials::load(plr_dir, provider_kind)?
-        .context("No credentials found. Please run 'plr auth <provider>' first.")?;
-
-    let provider: Box<dyn Provider> = match provider_kind {
-        ProviderKind::Spotify => {
-            let client_id =
-                std::env::var("SPOTIFY_CLIENT_ID").context("SPOTIFY_CLIENT_ID not set")?;
-            let client_secret =
-                std::env::var("SPOTIFY_CLIENT_SECRET").context("SPOTIFY_CLIENT_SECRET not set")?;
-
-            Box::new(SpotifyProvider::new(client_id, client_secret).with_token(&token, plr_dir))
-        }
-        ProviderKind::Youtube => {
-            let client_id =
-                std::env::var("YOUTUBE_CLIENT_ID").context("YOUTUBE_CLIENT_ID not set")?;
-            let client_secret =
-                std::env::var("YOUTUBE_CLIENT_SECRET").context("YOUTUBE_CLIENT_SECRET not set")?;
-
-            Box::new(YoutubeProvider::new(client_id, client_secret).with_token(&token, plr_dir))
-        }
-    };
-    Ok(provider)
-}
 
 pub async fn status(playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
     let playlist_id = playlist.context("Playlist required (use --playlist)")?;
