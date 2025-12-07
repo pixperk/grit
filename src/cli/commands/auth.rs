@@ -1,4 +1,4 @@
-use crate::provider::{Provider, ProviderKind, SpotifyProvider};
+use crate::provider::{Provider, ProviderKind, SpotifyProvider, YoutubeProvider};
 use crate::state::credentials;
 use anyhow::{Context, Result};
 use std::io::{BufRead, BufReader, Write};
@@ -11,7 +11,7 @@ const REDIRECT_URI: &str = "http://127.0.0.1:8888/callback";
 pub async fn run(provider: ProviderKind, plr_dir: &Path) -> Result<()> {
     match provider {
         ProviderKind::Spotify => auth_spotify(plr_dir).await,
-        ProviderKind::Youtube => anyhow::bail!("Youtube authentication not implemented yet"),
+        ProviderKind::Youtube => auth_youtube(plr_dir).await,
     }
 }
 
