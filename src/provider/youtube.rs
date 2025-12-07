@@ -129,7 +129,7 @@ impl YoutubeProvider {
     }
 
     pub fn with_token(mut self, token: &OAuthToken, plr_dir: &std::path::Path) -> Self {
-        *self.token.blocking_lock() = Some(token.clone());
+        self.token = Mutex::new(Some(token.clone()));
         self.plr_dir = Some(plr_dir.to_path_buf());
         self
     }
