@@ -77,9 +77,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Whoami { provider } => {
             cli::commands::auth::whoami(provider, &plr_dir).await?;
         }
-        /* Commands::Commit { message } => {
+        Commands::Commit { message } => {
             cli::commands::staging::commit(&message, cli.playlist.as_deref(), &plr_dir).await?;
-        } */
+        }
         _ => {
             println!("{:?}", cli.command);
         }

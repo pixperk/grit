@@ -3,7 +3,10 @@ use std::path::Path;
 
 use crate::{
     provider::{Provider, ProviderKind, SpotifyProvider, TrackChange, YoutubeProvider},
-    state::{clear_staged, credentials, load_staged, snapshot, stage_change},
+    state::{
+        apply_patch, clear_staged, credentials, load_staged, snapshot, stage_change, JournalEntry,
+        Operation,
+    },
 };
 
 fn create_provider(provider_kind: ProviderKind, plr_dir: &Path) -> Result<Box<dyn Provider>> {
@@ -257,6 +260,61 @@ pub async fn reset(playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
 
     println!("Staged changes cleared.");
     println!("  {} operations discarded", patch.changes.len());
+
+    Ok(())
+}
+
+pub async fn commit(message: &str, playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
+    let playlist_id = playlist.context("Playlist required (use --playlist)")?;
+
+    let snapshot_path = snapshot::snapshot_path(plr_dir, playlist_id);
+    if !snapshot_path.exists() {
+        bail!("Playlist not initialized. Run 'plr init' first.");
+    }
+
+    let patch = load_staged(plr_dir, playlist_id)?;
+    if patch.changes.is_empty() {
+        println!("No staged changes to commit.");
+        return Ok(());
+    }
+
+    let mut snapshot_copy = snapshot::load(&snapshot_path)?;
+
+    let mut added = 0;
+    let mut removed = 0;
+    let mut moved = 0;
+
+    for change in &patch.changes {
+        match change {
+            crate::provider::TrackChange::Added { .. } => added += 1,
+            crate::provider::TrackChange::Removed { .. } => removed += 1,
+            crate::provider::TrackChange::Moved { .. } => moved += 1,
+        }
+    }
+
+    apply_patch(&mut snapshot_copy, &patch)?;
+
+    let hash = snapshot::compute_hash(&snapshot_copy)?;
+
+    snapshot::save(&snapshot_copy, &snapshot_path)?;
+
+    let journal_path = JournalEntry::journal_path(plr_dir, playlist_id);
+    let entry = JournalEntry::new_with_message(
+        Operation::Commit,
+        hash.clone(),
+        added,
+        removed,
+        moved,
+        message.to_string(),
+    );
+    JournalEntry::append(&journal_path, &entry)?;
+
+    clear_staged(plr_dir, playlist_id)?;
+
+    println!("\n[{}] {}", hash, message);
+    println!("  +{} -{} ~{} tracks", added, removed, moved);
+    println!("\nChanges committed to local snapshot.");
+    println!("Use 'plr push' to sync with remote.");
 
     Ok(())
 }
