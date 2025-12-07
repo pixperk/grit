@@ -55,3 +55,41 @@ impl Config {
         self.plr_dir.join("playlists")
     }
 }
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+    use tempfile::{TempDir, tempdir};
+
+    #[test]
+    fn test_config_default(){
+        let config = Config::default();
+        assert_eq!(config.default_provider, None);
+        assert_eq!(config.plr_dir, PathBuf::from(".plr"));
+    }
+
+    #[test]
+    fn test_config_save_and_load(){
+        let temp = TempDir::new().unwrap();
+        let config_path = temp.path().join("config.toml");
+
+        let config = Config{
+            default_provider: Some(ProviderKind::Spotify),
+            plr_dir: PathBuf::from(".plr"),
+        };
+
+        config.save(&config_path).unwrap();
+        let loaded = Config::load(&config_path).unwrap();
+
+        assert_eq!(loaded.default_provider,config.default_provider);
+        assert_eq!(loaded.plr_dir, PathBuf::from(".plr"));
+    }
+
+    #[test]
+    fn test_config_paths() {
+        let config = Config::default();
+        assert_eq!(config.config_path(), PathBuf::from(".plr/config.toml"));
+        assert_eq!(config.credentials_dir(), PathBuf::from(".plr/credentials"));
+        assert_eq!(config.playlists_dir(), PathBuf::from(".plr/playlists"));
+    }
+}

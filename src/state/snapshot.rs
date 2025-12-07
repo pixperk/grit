@@ -45,3 +45,54 @@ pub fn load(path: &Path) -> anyhow::Result<PlaylistSnapshot> {
 pub fn snapshot_path(plr_dir: &Path, playlist_id: &str) -> std::path::PathBuf {
     plr_dir.join("playlists").join(playlist_id).join("playlist.yaml")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+    use crate::provider::{ProviderKind, Track};
+
+    fn sample_snapshot() -> PlaylistSnapshot {
+        PlaylistSnapshot {
+            id: "playlist123".to_string(),
+            name: "Test Playlist".to_string(),
+            description: Some("A test".to_string()),
+            tracks: vec![
+                Track {
+                    id: "track1".to_string(),
+                    name: "Song One".to_string(),
+                    artists: vec!["Artist A".to_string()],
+                    duration_ms: 180000,
+                    provider: ProviderKind::Spotify,
+                    metadata: None,
+                },
+            ],
+            provider: ProviderKind::Spotify,
+            snapshot_hash: String::new(),
+            metadata: None,
+        }
+    }
+
+    #[test]
+    fn test_compute_hash_deterministic() {
+        let snapshot = sample_snapshot();
+        let hash1 = compute_hash(&snapshot).unwrap();
+        let hash2 = compute_hash(&snapshot).unwrap();
+        assert_eq!(hash1, hash2);
+        assert_eq!(hash1.len(), 12); // Short hash
+    }
+
+    #[test]
+    fn test_save_and_load() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("playlist.yaml");
+
+        let snapshot = sample_snapshot();
+        save(&snapshot, &path).unwrap();
+        let loaded = load(&path).unwrap();
+
+        assert_eq!(loaded.id, snapshot.id);
+        assert_eq!(loaded.name, snapshot.name);
+        assert_eq!(loaded.tracks.len(), 1);
+    }
+}

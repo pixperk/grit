@@ -77,3 +77,35 @@ impl JournalEntry{
 }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_append_and_read() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("journal.log");
+
+        let entry1 = JournalEntry::new(Operation::Init, "abc123".to_string(), 5, 0, 0);
+        let entry2 = JournalEntry::new(Operation::Pull, "def456".to_string(), 2, 1, 0);
+
+        JournalEntry::append(&path, &entry1).unwrap();
+        JournalEntry::append(&path, &entry2).unwrap();
+
+        let entries = JournalEntry::read_all(&path).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].operation, Operation::Init);
+        assert_eq!(entries[1].operation, Operation::Pull);
+        assert_eq!(entries[0].added, 5);
+    }
+
+    #[test]
+    fn test_read_empty_journal() {
+        let temp = TempDir::new().unwrap();
+        let path = temp.path().join("nonexistent.log");
+
+        let entries = JournalEntry::read_all(&path).unwrap();
+        assert!(entries.is_empty());
+    }
+}
