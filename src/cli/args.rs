@@ -26,8 +26,11 @@ pub struct Cli {
 pub enum Commands {
     /// Initialize tracking for a playlist
     Init {
-        /// Playlist ID to initialize
-        playlist_id: String,
+        /// Playlist URL or ID (e.g., https://open.spotify.com/playlist/37i9... or 37i9...)
+        playlist: String,
+        /// Provider (defaults to Spotify)
+        #[arg(short, long)]
+        provider: Option<ProviderKind>,
     },
     /// Pull latest changes from remote
     Pull,

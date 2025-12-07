@@ -7,6 +7,7 @@ use std::path::Path;
 
 const REDIRECT_URI: &str = "http://127.0.0.1:8888/callback";
 
+/// Run the authentication flow for the given provider.
 pub async fn run(provider: ProviderKind, plr_dir: &Path) -> Result<()> {
     match provider {
         ProviderKind::Spotify => auth_spotify(plr_dir).await,
