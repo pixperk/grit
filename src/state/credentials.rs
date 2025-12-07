@@ -1,5 +1,7 @@
 use crate::provider::{OAuthToken, ProviderKind};
+use crate::utils::crypto;
 use anyhow::{Context, Result};
+use base64::Engine;
 use std::fs;
 use std::path::Path;
 
@@ -11,9 +13,23 @@ pub fn save(plr_dir: &Path, provider: ProviderKind, token: &OAuthToken) -> Resul
             .with_context(|| format!("Failed to create credentials dir {:?}", parent))?;
     }
 
-    let json = serde_json::to_string_pretty(token).context("Failed to serialize token")?;
+    let json = serde_json::to_string(token).context("Failed to serialize token")?;
 
-    fs::write(&path, json).with_context(|| format!("Failed to write credentials to {:?}", path))
+    let encrypted =
+        crypto::encrypt(json.as_bytes(), plr_dir).context("Failed to encrypt credentials")?;
+
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&encrypted);
+
+    fs::write(&path, encoded)
+        .with_context(|| format!("Failed to write credentials to {:?}", path))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+    }
+
+    Ok(())
 }
 
 pub fn load(plr_dir: &Path, provider: ProviderKind) -> Result<Option<OAuthToken>> {
@@ -23,10 +39,19 @@ pub fn load(plr_dir: &Path, provider: ProviderKind) -> Result<Option<OAuthToken>
         return Ok(None);
     }
 
-    let content = fs::read_to_string(&path)
+    let encoded = fs::read_to_string(&path)
         .with_context(|| format!("Failed to read credentials from {:?}", path))?;
 
-    let token = serde_json::from_str(&content).with_context(|| "Failed to parse credentials")?;
+    let encrypted = base64::engine::general_purpose::STANDARD
+        .decode(encoded.trim())
+        .context("Failed to decode credentials")?;
+
+    let decrypted =
+        crypto::decrypt(&encrypted, plr_dir).context("Failed to decrypt credentials")?;
+
+    let json = String::from_utf8(decrypted).context("Invalid UTF-8 in decrypted credentials")?;
+
+    let token = serde_json::from_str(&json).context("Failed to parse credentials")?;
 
     Ok(Some(token))
 }
