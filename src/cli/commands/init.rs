@@ -1,5 +1,5 @@
 use crate::provider::{Provider, ProviderKind, SpotifyProvider, YoutubeProvider};
-use crate::state::{credentials, journal, snapshot, JournalEntry, Operation};
+use crate::state::{clear_staged, credentials, journal, snapshot, JournalEntry, Operation};
 use anyhow::{Context, Result};
 use std::path::Path;
 
@@ -73,6 +73,9 @@ pub async fn run(provider: ProviderKind, playlist: &str, plr_dir: &Path) -> Resu
     let journal_path = JournalEntry::journal_path(plr_dir, &playlist_id);
     let entry = JournalEntry::new(Operation::Init, hash, playlist.tracks.len(), 0, 0);
     JournalEntry::append(&journal_path, &entry)?;
+
+    // Clear any staged changes
+    clear_staged(plr_dir, &playlist_id)?;
 
     println!("\nPlaylist initialized!");
     println!("  Snapshot: {:?}", snapshot_path);
