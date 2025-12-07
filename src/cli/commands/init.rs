@@ -48,7 +48,7 @@ pub async fn run(provider: ProviderKind, playlist: &str, plr_dir: &Path) -> Resu
             let client_secret =
                 std::env::var("SPOTIFY_CLIENT_SECRET").context("SPOTIFY_CLIENT_SECRET not set")?;
 
-            SpotifyProvider::new(client_id, client_secret).with_token(&token)
+            SpotifyProvider::new(client_id, client_secret).with_token(&token, plr_dir)
         }
         ProviderKind::Youtube => {
             anyhow::bail!("Youtube initialization not implemented yet");

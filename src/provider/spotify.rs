@@ -4,6 +4,7 @@ use crate::provider::{
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
 const AUTH_URL: &str = "https://accounts.spotify.com/authorize";
 const TOKEN_URL: &str = "https://accounts.spotify.com/api/token";
@@ -12,7 +13,8 @@ const API_BASE: &str = "https://api.spotify.com/v1";
 pub struct SpotifyProvider {
     client_id: String,
     client_secret: String,
-    access_token: Option<String>,
+    token: Mutex<Option<OAuthToken>>,
+    plr_dir: Option<std::path::PathBuf>,
     http: reqwest::Client,
 }
 
@@ -93,20 +95,53 @@ impl SpotifyProvider {
         Self {
             client_id,
             client_secret,
-            access_token: None,
+            token: Mutex::new(None),
+            plr_dir: None,
             http: reqwest::Client::new(),
         }
     }
 
-    pub fn with_token(mut self, token: &OAuthToken) -> Self {
-        self.access_token = Some(token.access_token.clone());
+    pub fn with_token(mut self, token: &OAuthToken, plr_dir: &std::path::Path) -> Self {
+        *self.token.blocking_lock() = Some(token.clone());
+        self.plr_dir = Some(plr_dir.to_path_buf());
         self
     }
 
-    fn get_token(&self) -> Result<&str> {
-        self.access_token
-            .as_deref()
-            .context("Not authenticated with Spotify")
+    /// Check if a token is expired
+    fn is_token_expired(token: &OAuthToken) -> bool {
+        if let Some(expires_at) = token.expires_at {
+            use std::time::{SystemTime, UNIX_EPOCH};
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            return now >= expires_at.saturating_sub(60);
+        }
+        false
+    }
+
+    /// Get access token, refreshing if expired
+    async fn get_token(&self) -> Result<String> {
+        let token_guard = self.token.lock().await;
+        let current_token = token_guard.as_ref()
+            .context("Not authenticated with Spotify")?
+            .clone();
+        drop(token_guard);
+
+        if Self::is_token_expired(&current_token) {
+            println!("Token expired, refreshing...");
+            let new_token = self.refresh_token(&current_token).await?;
+
+            if let Some(plr_dir) = &self.plr_dir {
+                use crate::state::credentials;
+                credentials::save(plr_dir, ProviderKind::Spotify, &new_token)?;
+            }
+
+            *self.token.lock().await = Some(new_token.clone());
+            Ok(new_token.access_token)
+        } else {
+            Ok(current_token.access_token)
+        }
     }
 
     fn basic_auth_header(&self) -> String {
@@ -211,7 +246,6 @@ impl Provider for SpotifyProvider {
 
         let mut new_token = self.token_request(&params).await?.into_oauth_token();
 
-        // Spotify doesn't always return a new refresh_token
         if new_token.refresh_token.is_none() {
             new_token.refresh_token = token.refresh_token.clone();
         }
@@ -220,10 +254,10 @@ impl Provider for SpotifyProvider {
     }
 
     async fn fetch(&self, playlist_id: &str) -> Result<PlaylistSnapshot> {
-        let token = self.get_token()?;
+        let token = self.get_token().await?;
         let url = format!("{}/playlists/{}", API_BASE, playlist_id);
 
-        let playlist: SpotifyPlaylist = self.api_get(&url, token).await?;
+        let playlist: SpotifyPlaylist = self.api_get(&url, &token).await?;
 
         let mut all_tracks = Vec::new();
 
@@ -242,7 +276,7 @@ impl Provider for SpotifyProvider {
 
         let mut next_url = playlist.tracks.next;
         while let Some(url) = next_url {
-            let page: SpotifyTracks = self.api_get(&url, token).await?;
+            let page: SpotifyTracks = self.api_get(&url, &token).await?;
 
             for item in page.items {
                 if let Some(track) = item.track {
@@ -272,11 +306,9 @@ impl Provider for SpotifyProvider {
     }
 
     async fn apply(&self, playlist_id: &str, patch: &DiffPatch) -> Result<()> {
-        let token = self.get_token()?;
+        let token = self.get_token().await?;
 
-        // Process in order: removals, additions, then moves
-        // (Processing removals first prevents index shifting issues)
-
+        // Process removals first to prevent index shifting issues
         for change in &patch.changes {
             if let TrackChange::Removed { track, .. } = change {
                 let uri = format!("spotify:track:{}", track.id);
@@ -316,9 +348,6 @@ impl Provider for SpotifyProvider {
 
         for change in &patch.changes {
             if let TrackChange::Moved { from, to, .. } = change {
-                // Spotify's reorder API uses insert_before semantics:
-                // - When moving forward (from < to): insert_before = to + 1 (account for removal)
-                // - When moving backward (from > to): insert_before = to
                 let insert_before = if from < to { to + 1 } else { *to };
 
                 let body = serde_json::json!({
@@ -341,19 +370,18 @@ impl Provider for SpotifyProvider {
     }
 
     async fn playable_url(&self, track: &Track) -> Result<String> {
-        // Spotify URI format for librespot
         Ok(format!("spotify:track:{}", track.id))
     }
 
     async fn search_by_query(&self, query: &str) -> Result<Vec<Track>> {
-        let token = self.get_token()?;
+        let token = self.get_token().await?;
         let url = format!(
             "{}/search?q={}&type=track&limit=10",
             API_BASE,
             urlencoding::encode(query)
         );
 
-        let resp: SpotifySearchResponse = self.api_get(&url, token).await?;
+        let resp: SpotifySearchResponse = self.api_get(&url, &token).await?;
 
         let tracks = resp
             .tracks
