@@ -135,6 +135,15 @@ pub async fn add(track_id: &str, playlist: Option<&str>, plr_dir: &Path) -> Resu
 
     let track = provider.fetch_track(track_id).await?;
 
+    // Validate provider match
+    if track.provider != snapshot.provider {
+        bail!(
+            "Cannot add {:?} track to {:?} playlist. Provider mismatch.",
+            track.provider,
+            snapshot.provider
+        );
+    }
+
     let index = snapshot.tracks.len();
 
     let change = TrackChange::Added {
