@@ -101,4 +101,22 @@ pub enum Commands {
         #[arg(short = 'l', long)]
         playlist: Option<String>,
     },
+    /// Search within local playlist tracks
+    Find {
+        /// Search query
+        query: String,
+        /// Playlist ID or use --playlist
+        #[arg(short = 'l', long)]
+        playlist: Option<String>,
+    },
+    /// Delete credentials for a provider
+    Logout {
+        /// Provider to logout from
+        provider: ProviderKind,
+    },
+    /// Show authenticated user info
+    Whoami {
+        /// Provider to check
+        provider: ProviderKind,
+    },
 }

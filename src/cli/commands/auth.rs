@@ -136,3 +136,69 @@ fn send_response(stream: &mut impl Write, status: &str, body: &str) -> Result<()
     stream.flush()?;
     Ok(())
 }
+
+pub async fn logout(provider: ProviderKind, plr_dir: &Path) -> Result<()> {
+    // Check if credentials exist
+    let token = credentials::load(plr_dir, provider)?;
+
+    if token.is_none() {
+        println!("Not logged in to {:?}", provider);
+        return Ok(());
+    }
+
+    // Delete credentials
+    credentials::delete(plr_dir, provider)?;
+
+    println!("Logged out from {:?}", provider);
+    println!("Run 'plr auth {:?}' to login again", provider);
+
+    Ok(())
+}
+
+pub async fn whoami(provider: ProviderKind, plr_dir: &Path) -> Result<()> {
+    let token = credentials::load(plr_dir, provider)?
+        .context("Not authenticated. Run 'plr auth <provider>' first")?;
+
+    match provider {
+        ProviderKind::Spotify => {
+            println!("Logged in to Spotify");
+            println!("Token type: {}", token.token_type);
+            if let Some(scope) = &token.scope {
+                println!("Scopes: {}", scope);
+            }
+            if let Some(expires_at) = token.expires_at {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                if now < expires_at {
+                    let remaining = expires_at - now;
+                    println!("Token expires in: {}s", remaining);
+                } else {
+                    println!("Token expired (will auto-refresh on next use)");
+                }
+            }
+        }
+        ProviderKind::Youtube => {
+            println!("Logged in to YouTube");
+            println!("Token type: {}", token.token_type);
+            if let Some(scope) = &token.scope {
+                println!("Scopes: {}", scope);
+            }
+            if let Some(expires_at) = token.expires_at {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                if now < expires_at {
+                    let remaining = expires_at - now;
+                    println!("Token expires in: {}s", remaining);
+                } else {
+                    println!("Token expired (will auto-refresh on next use)");
+                }
+            }
+        }
+    }
+
+    Ok(())
+}

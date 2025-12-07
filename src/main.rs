@@ -62,6 +62,20 @@ async fn main() -> anyhow::Result<()> {
             cli::commands::misc::list(playlist.as_deref().or(cli.playlist.as_deref()), &plr_dir)
                 .await?;
         }
+        Commands::Find { query, playlist } => {
+            cli::commands::misc::find(
+                &query,
+                playlist.as_deref().or(cli.playlist.as_deref()),
+                &plr_dir,
+            )
+            .await?;
+        }
+        Commands::Logout { provider } => {
+            cli::commands::auth::logout(provider, &plr_dir).await?;
+        }
+        Commands::Whoami { provider } => {
+            cli::commands::auth::whoami(provider, &plr_dir).await?;
+        }
         /* Commands::Commit { message } => {
             cli::commands::staging::commit(&message, cli.playlist.as_deref(), &plr_dir).await?;
         } */
