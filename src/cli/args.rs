@@ -1,5 +1,5 @@
-use clap::{Parser, Subcommand};
 use crate::provider::ProviderKind;
+use clap::{Parser, Subcommand};
 
 /// plr - Git-like version control for your playlists
 ///
@@ -10,7 +10,7 @@ use crate::provider::ProviderKind;
 #[command(version, about, long_about = None)]
 pub struct Cli {
     #[arg(short, long, global = true)]
-    pub provider : Option<ProviderKind>,
+    pub provider: Option<ProviderKind>,
 
     #[arg(short = 'l', long, global = true)]
     pub playlist: Option<String>,
@@ -38,8 +38,6 @@ pub enum Commands {
     Push,
     /// Show sync status
     Status,
-    /// Show diff between local and remote
-    Diff,
     /// Show change history
     Log,
     /// Apply a playlist state from file
@@ -53,5 +51,37 @@ pub enum Commands {
     Auth {
         /// Provider to authenticate
         provider: ProviderKind,
+    },
+    Search {
+        /// Search query
+        query: String,
+    },
+    Add {
+        /// Track ID to add
+        track_id: String,
+    },
+    Remove {
+        /// Track ID to remove
+        track_id: String,
+    },
+    Move {
+        /// Track ID to move
+        track_id: String,
+        /// New position index
+        new_index: usize,
+    },
+    Commit {
+        /// Commit message
+        #[arg(short, long)]
+        message: String,
+    },
+
+    Diff {
+        /// Show only staged changes
+        #[arg(long)]
+        staged: bool,
+        /// Show only remote changes
+        #[arg(long)]
+        remote: bool,
     },
 }
