@@ -97,7 +97,12 @@ async fn main() -> anyhow::Result<()> {
             cli::commands::misc::playlists(query.as_deref(), &plr_dir).await?;
         }
         Commands::Revert { hash, playlist } => {
-            cli::commands::vcs::revert(hash.as_deref(), playlist.as_deref().or(cli.playlist.as_deref()), &plr_dir).await?;
+            cli::commands::vcs::revert(
+                hash.as_deref(),
+                playlist.as_deref().or(cli.playlist.as_deref()),
+                &plr_dir,
+            )
+            .await?;
         }
 
         _ => {

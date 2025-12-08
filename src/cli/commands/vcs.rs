@@ -300,7 +300,7 @@ pub async fn diff_cmd(
     Ok(())
 }
 
-pub async fn revert(hash: &str, playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
+pub async fn revert(hash: Option<&str>, playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
     let playlist_id = playlist.context("Playlist required (use --playlist)")?;
 
     let snapshot_path = snapshot::snapshot_path(plr_dir, playlist_id);
@@ -317,9 +317,25 @@ pub async fn revert(hash: &str, playlist: Option<&str>, plr_dir: &Path) -> Resul
         );
     }
 
+    // Determine which hash to revert to
+    let target_hash = if let Some(h) = hash {
+        h.to_string()
+    } else {
+        // No hash provided - revert to previous commit
+        let journal_path = JournalEntry::journal_path(plr_dir, playlist_id);
+        let entries = JournalEntry::read_all(&journal_path)?;
+
+        if entries.len() < 2 {
+            bail!("Not enough commits to revert. Need at least 2 commits in history.");
+        }
+
+        // Get the second-to-last entry (the one before HEAD)
+        entries[entries.len() - 2].snapshot_hash.clone()
+    };
+
     // Load the target snapshot by hash
-    let target_snapshot = snapshot::load_by_hash(hash, plr_dir, playlist_id)
-        .with_context(|| format!("Failed to load snapshot with hash '{}'", hash))?;
+    let target_snapshot = snapshot::load_by_hash(&target_hash, plr_dir, playlist_id)
+        .with_context(|| format!("Failed to load snapshot with hash '{}'", target_hash))?;
 
     let full_hash = snapshot::compute_hash(&target_snapshot)?;
 
@@ -334,7 +350,7 @@ pub async fn revert(hash: &str, playlist: Option<&str>, plr_dir: &Path) -> Resul
         0,
         0,
         0,
-        format!("Revert to {}", hash),
+        format!("Revert to {}", target_hash),
     );
     JournalEntry::append(&journal_path, &entry)?;
 
