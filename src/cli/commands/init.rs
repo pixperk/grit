@@ -70,6 +70,9 @@ pub async fn run(provider: ProviderKind, playlist: &str, plr_dir: &Path) -> Resu
     snapshot::save(&playlist, &snapshot_path)?;
     let hash = snapshot::compute_hash(&playlist)?;
 
+    // Save snapshot by hash for revert functionality
+    snapshot::save_by_hash(&playlist, &hash, plr_dir, &playlist_id)?;
+
     let journal_path = JournalEntry::journal_path(plr_dir, &playlist_id);
     let entry = JournalEntry::new(Operation::Init, hash, playlist.tracks.len(), 0, 0);
     JournalEntry::append(&journal_path, &entry)?;
