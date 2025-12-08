@@ -130,8 +130,8 @@ pub enum Commands {
     },
     /// Revert playlist to a previous commit state
     Revert {
-        /// Commit hash to revert to (use 'plr log' to see hashes)
-        hash: String,
+        /// Commit hash to revert to (defaults to previous commit if not provided)
+        hash: Option<String>,
         /// Playlist ID or use --playlist
         #[arg(short = 'l', long)]
         playlist: Option<String>,

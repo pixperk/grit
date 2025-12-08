@@ -96,6 +96,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Playlists { query } => {
             cli::commands::misc::playlists(query.as_deref(), &plr_dir).await?;
         }
+        Commands::Revert { hash, playlist } => {
+            cli::commands::vcs::revert(hash.as_deref(), playlist.as_deref().or(cli.playlist.as_deref()), &plr_dir).await?;
+        }
 
         _ => {
             println!("{:?}", cli.command);

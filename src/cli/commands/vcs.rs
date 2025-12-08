@@ -299,3 +299,49 @@ pub async fn diff_cmd(
 
     Ok(())
 }
+
+pub async fn revert(hash: &str, playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
+    let playlist_id = playlist.context("Playlist required (use --playlist)")?;
+
+    let snapshot_path = snapshot::snapshot_path(plr_dir, playlist_id);
+    if !snapshot_path.exists() {
+        bail!("Playlist not initialized. Run 'plr init' first.");
+    }
+
+    // Check for uncommitted staged changes
+    let staged = load_staged(plr_dir, playlist_id)?;
+    if !staged.changes.is_empty() {
+        bail!(
+            "You have {} uncommitted staged change(s). Commit or reset before reverting.",
+            staged.changes.len()
+        );
+    }
+
+    // Load the target snapshot by hash
+    let target_snapshot = snapshot::load_by_hash(hash, plr_dir, playlist_id)
+        .with_context(|| format!("Failed to load snapshot with hash '{}'", hash))?;
+
+    let full_hash = snapshot::compute_hash(&target_snapshot)?;
+
+    // Save as current snapshot
+    snapshot::save(&target_snapshot, &snapshot_path)?;
+
+    // Record in journal
+    let journal_path = JournalEntry::journal_path(plr_dir, playlist_id);
+    let entry = JournalEntry::new_with_message(
+        Operation::Commit,
+        full_hash.clone(),
+        0,
+        0,
+        0,
+        format!("Revert to {}", hash),
+    );
+    JournalEntry::append(&journal_path, &entry)?;
+
+    println!("\nReverted to commit [{}]", full_hash);
+    println!("Playlist: {}", target_snapshot.name);
+    println!("Tracks: {}", target_snapshot.tracks.len());
+    println!("\nUse 'plr push' to sync with remote if desired.");
+
+    Ok(())
+}
