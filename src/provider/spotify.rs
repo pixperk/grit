@@ -221,6 +221,8 @@ impl Provider for SpotifyProvider {
             "playlist-read-collaborative",
             "playlist-modify-public",
             "playlist-modify-private",
+            "user-modify-playback-state",
+            "user-read-playback-state",
         ]
         .join(" ");
 

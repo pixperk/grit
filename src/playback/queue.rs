@@ -96,6 +96,10 @@ impl Queue {
         self.tracks.len()
     }
 
+    pub fn position(&self) -> usize {
+        self.current
+    }
+
     pub fn jump_to(&mut self, index: usize) -> Option<&Track> {
         if index < self.play_order.len() {
             self.current = index;

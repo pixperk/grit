@@ -40,9 +40,50 @@ mod unix {
         event_rx: mpsc::Receiver<MpvEvent>,
     }
 
+    /// Check if required dependencies are installed
+    pub fn check_dependencies() -> Result<()> {
+        // Check mpv
+        if Command::new("mpv")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_err()
+        {
+            anyhow::bail!(
+                "mpv not found. Install it:\n\n  \
+                 Ubuntu/Debian: sudo apt install mpv\n  \
+                 Arch:          sudo pacman -S mpv\n  \
+                 Fedora:        sudo dnf install mpv\n  \
+                 macOS:         brew install mpv\n"
+            );
+        }
+
+        // Check yt-dlp (needed for YouTube URLs)
+        if Command::new("yt-dlp")
+            .arg("--version")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_err()
+        {
+            anyhow::bail!(
+                "yt-dlp not found (required for YouTube playback). Install it:\n\n  \
+                 pip install yt-dlp\n  \
+                 # or\n  \
+                 pipx install yt-dlp\n"
+            );
+        }
+
+        Ok(())
+    }
+
     impl MpvPlayer {
         /// Spawn mpv and connect to its IPC socket
         pub async fn spawn() -> Result<Self> {
+            // Check dependencies first
+            check_dependencies()?;
+
             let socket_path = PathBuf::from(format!("/tmp/grit-mpv-{}.sock", std::process::id()));
 
             // Clean up old socket if exists
