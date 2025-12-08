@@ -145,32 +145,50 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
-    let (title, artists) = app
-        .current_track()
-        .map(|t| (t.name.clone(), t.artists.join(", ")))
-        .unwrap_or(("Nothing playing".into(), String::new()));
+    let content = if app.error.is_some() {
+        vec![
+            Line::from(""),
+            Line::from(Span::styled("uh oh!", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD))),
+            Line::from(""),
+            Line::from(Span::styled("failed to load track", Style::default().fg(SAKURA_DIM))),
+        ]
+    } else {
+        let (title, artists) = app
+            .current_track()
+            .map(|t| (t.name.clone(), t.artists.join(", ")))
+            .unwrap_or(("Nothing playing".into(), String::new()));
 
-    let content = vec![
-        Line::from(Span::styled("now playing", Style::default().fg(SAKURA_DIM))),
-        Line::from(""),
-        Line::from(Span::styled(title, Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD))),
-        Line::from(Span::styled(artists, Style::default().fg(SAKURA_SOFT))),
-    ];
+        vec![
+            Line::from(Span::styled("now playing", Style::default().fg(SAKURA_DIM))),
+            Line::from(""),
+            Line::from(Span::styled(title, Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(artists, Style::default().fg(SAKURA_SOFT))),
+        ]
+    };
 
     frame.render_widget(Paragraph::new(content), area);
 }
 
 fn draw_progress(frame: &mut Frame, app: &App, area: Rect) {
-    let pos = App::format_time(app.position_secs);
-    let dur = App::format_time(app.duration_secs);
-    let label = format!("{} / {}", pos, dur);
+    if app.error.is_some() {
+        // Show empty progress on error
+        let gauge = Gauge::default()
+            .gauge_style(Style::default().fg(Color::Rgb(80, 80, 85)).bg(Color::Rgb(50, 50, 55)))
+            .ratio(0.0)
+            .label(Span::styled("— / —", Style::default().fg(SAKURA_DIM)));
+        frame.render_widget(gauge, area);
+    } else {
+        let pos = App::format_time(app.position_secs);
+        let dur = App::format_time(app.duration_secs);
+        let label = format!("{} / {}", pos, dur);
 
-    let gauge = Gauge::default()
-        .gauge_style(Style::default().fg(SAKURA_DEEP).bg(Color::Rgb(50, 50, 55)))
-        .ratio(app.progress())
-        .label(Span::styled(label, Style::default().fg(SAKURA_FG)));
+        let gauge = Gauge::default()
+            .gauge_style(Style::default().fg(SAKURA_DEEP).bg(Color::Rgb(50, 50, 55)))
+            .ratio(app.progress())
+            .label(Span::styled(label, Style::default().fg(SAKURA_FG)));
 
-    frame.render_widget(gauge, area);
+        frame.render_widget(gauge, area);
+    }
 }
 
 fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
@@ -244,13 +262,7 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(list, area);
 }
 
-fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
-    let error_line = if let Some(err) = &app.error {
-        Line::from(Span::styled(format!("⚠ {}", err), Style::default().fg(Color::Rgb(255, 100, 100))))
-    } else {
-        Line::from("")
-    };
-
+fn draw_controls(frame: &mut Frame, _app: &App, area: Rect) {
     let controls = Line::from(vec![
         Span::styled("[space]", Style::default().fg(SAKURA_PINK)),
         Span::styled(" pause ", Style::default().fg(SAKURA_DIM)),
@@ -268,5 +280,5 @@ fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::TOP)
         .border_style(Style::default().fg(SAKURA_PINK));
 
-    frame.render_widget(Paragraph::new(vec![error_line, controls]).block(block), area);
+    frame.render_widget(Paragraph::new(controls).block(block), area);
 }

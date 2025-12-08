@@ -80,6 +80,43 @@ mod unix {
         Ok(())
     }
 
+    /// Fetch direct audio URL from YouTube using yt-dlp with timeout
+    pub async fn fetch_audio_url(youtube_url: &str) -> Result<String> {
+        use tokio::process::Command as TokioCommand;
+        use tokio::time::{timeout, Duration};
+
+        let fetch = TokioCommand::new("yt-dlp")
+            .args([
+                "-f", "bestaudio",
+                "-g",  // Get URL only
+                "--no-warnings",
+                "--no-playlist",
+                youtube_url,
+            ])
+            .output();
+
+        // 15 second timeout for yt-dlp
+        let output = timeout(Duration::from_secs(15), fetch)
+            .await
+            .context("yt-dlp timed out after 15 seconds")?
+            .context("Failed to run yt-dlp")?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("yt-dlp failed: {}", stderr.lines().next().unwrap_or("unknown error"));
+        }
+
+        let url = String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .to_string();
+
+        if url.is_empty() {
+            anyhow::bail!("yt-dlp returned empty URL");
+        }
+
+        Ok(url)
+    }
+
     impl MpvPlayer {
         /// Spawn mpv and connect to its IPC socket
         pub async fn spawn() -> Result<Self> {
@@ -91,13 +128,12 @@ mod unix {
             // Clean up old socket if exists
             let _ = std::fs::remove_file(&socket_path);
 
-            // Spawn mpv in idle mode
+            // Spawn mpv in idle mode (no --ytdl, we fetch URLs ourselves)
             let process = Command::new("mpv")
                 .args([
                     "--idle=yes",
                     "--keep-open=yes",         // Don't quit on errors or end of file
                     "--no-video",
-                    "--ytdl",
                     "--no-terminal",           // Disable mpv's terminal input/output
                     "--really-quiet",          // Suppress all messages
                     &format!("--input-ipc-server={}", socket_path.display()),

@@ -2,7 +2,7 @@ use anyhow::{bail, Context, Result};
 use crossterm::event::KeyCode;
 use std::path::Path;
 
-use crate::playback::{MpvPlayer, Queue, SpotifyPlayer};
+use crate::playback::{fetch_audio_url, MpvPlayer, Queue, SpotifyPlayer};
 use crate::provider::ProviderKind;
 use crate::state::{credentials, snapshot};
 use crate::tui::{App, PlayerBackend, Tui};
@@ -208,8 +208,15 @@ async fn play_mpv(
     tui.draw(&app)?;
 
     if let Some(track) = queue.current_track().cloned() {
-        let url = provider.playable_url(&track).await?;
-        player.load(&url).await?;
+        let yt_url = provider.playable_url(&track).await?;
+        match fetch_audio_url(&yt_url).await {
+            Ok(audio_url) => {
+                player.load(&audio_url).await?;
+            }
+            Err(e) => {
+                app.set_error(format!("Failed to load: {}", e));
+            }
+        }
         app.duration_secs = track.duration_ms as f64 / 1000.0;
         // Find actual index in tracks list
         if let Some(idx) = app.tracks.iter().position(|t| t.id == track.id) {
@@ -256,11 +263,14 @@ async fn play_mpv(
                         app.duration_secs = track.duration_ms as f64 / 1000.0;
                         tui.draw(&app)?;
                         match provider.playable_url(&track).await {
-                            Ok(url) => {
-                                if let Err(e) = player.load(&url).await {
-                                    app.set_error(e.to_string());
+                            Ok(yt_url) => match fetch_audio_url(&yt_url).await {
+                                Ok(audio_url) => {
+                                    if let Err(e) = player.load(&audio_url).await {
+                                        app.set_error(e.to_string());
+                                    }
                                 }
-                            }
+                                Err(e) => app.set_error(e.to_string()),
+                            },
                             Err(e) => app.set_error(e.to_string()),
                         }
                         app.loading = false;
@@ -278,11 +288,14 @@ async fn play_mpv(
                         app.duration_secs = track.duration_ms as f64 / 1000.0;
                         tui.draw(&app)?;
                         match provider.playable_url(&track).await {
-                            Ok(url) => {
-                                if let Err(e) = player.load(&url).await {
-                                    app.set_error(e.to_string());
+                            Ok(yt_url) => match fetch_audio_url(&yt_url).await {
+                                Ok(audio_url) => {
+                                    if let Err(e) = player.load(&audio_url).await {
+                                        app.set_error(e.to_string());
+                                    }
                                 }
-                            }
+                                Err(e) => app.set_error(e.to_string()),
+                            },
                             Err(e) => app.set_error(e.to_string()),
                         }
                         app.loading = false;
@@ -316,11 +329,14 @@ async fn play_mpv(
                             queue.jump_to(idx);
                             tui.draw(&app)?;
                             match provider.playable_url(&track).await {
-                                Ok(url) => {
-                                    if let Err(e) = player.load(&url).await {
-                                        app.set_error(e.to_string());
+                                Ok(yt_url) => match fetch_audio_url(&yt_url).await {
+                                    Ok(audio_url) => {
+                                        if let Err(e) = player.load(&audio_url).await {
+                                            app.set_error(e.to_string());
+                                        }
                                     }
-                                }
+                                    Err(e) => app.set_error(e.to_string()),
+                                },
                                 Err(e) => app.set_error(e.to_string()),
                             }
                             app.loading = false;
@@ -344,8 +360,13 @@ async fn play_mpv(
                     app.position_secs = 0.0;
                     app.duration_secs = track.duration_ms as f64 / 1000.0;
                     tui.draw(&app)?;
-                    if let Ok(url) = provider.playable_url(&track).await {
-                        let _ = player.load(&url).await;
+                    if let Ok(yt_url) = provider.playable_url(&track).await {
+                        match fetch_audio_url(&yt_url).await {
+                            Ok(audio_url) => {
+                                let _ = player.load(&audio_url).await;
+                            }
+                            Err(e) => app.set_error(e.to_string()),
+                        }
                     }
                     app.loading = false;
                     skip_position = 5;
