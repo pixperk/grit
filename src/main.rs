@@ -87,6 +87,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Log => {
             cli::commands::vcs::log(cli.playlist.as_deref(), &plr_dir).await?;
         }
+        Commands::Pull => {
+            cli::commands::vcs::pull(cli.playlist.as_deref(), &plr_dir).await?;
+        }
 
         _ => {
             println!("{:?}", cli.command);

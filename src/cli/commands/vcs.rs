@@ -123,3 +123,66 @@ pub async fn log(playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
 
     Ok(())
 }
+
+pub async fn pull(playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
+    let playlist_id = playlist.context("Playlist required (use --playlist)")?;
+
+    let snapshot_path = snapshot::snapshot_path(plr_dir, playlist_id);
+    if !snapshot_path.exists() {
+        bail!("Playlist not initialized. Run 'plr init' first.");
+    }
+
+    let staged = load_staged(plr_dir, playlist_id)?;
+    if !staged.changes.is_empty() {
+        bail!(
+            "You have {} uncommitted staged change(s). Please commit or reset before pulling.",
+            staged.changes.len()
+        );
+    }
+
+    let local_snapshot = snapshot::load(&snapshot_path)?;
+    let provider = create_provider(local_snapshot.provider, plr_dir)?;
+
+    println!("Fetching remote playlist state...");
+    let remote_snapshot = provider.fetch(playlist_id).await?;
+
+    let local_hash = snapshot::compute_hash(&local_snapshot)?;
+    let remote_hash = snapshot::compute_hash(&remote_snapshot)?;
+
+    if local_hash == remote_hash {
+        println!("\nAlready up to date.");
+        return Ok(());
+    }
+
+    let patch = diff(&local_snapshot, &remote_snapshot);
+
+    let mut added = 0;
+    let mut removed = 0;
+    let mut moved = 0;
+
+    for change in &patch.changes {
+        match change {
+            crate::provider::TrackChange::Added { .. } => added += 1,
+            crate::provider::TrackChange::Removed { .. } => removed += 1,
+            crate::provider::TrackChange::Moved { .. } => moved += 1,
+        }
+    }
+
+    println!(
+        "\nPulling changes from remote: +{} -{} ~{}",
+        added, removed, moved
+    );
+
+    // Update local snapshot to match remote
+    snapshot::save(&remote_snapshot, &snapshot_path)?;
+
+    // Record in journal
+    let journal_path = JournalEntry::journal_path(plr_dir, playlist_id);
+    let entry = JournalEntry::new(Operation::Pull, remote_hash, added, removed, moved);
+    JournalEntry::append(&journal_path, &entry)?;
+
+    println!("\nSuccessfully pulled from remote!");
+    println!("  {} changes applied", patch.changes.len());
+
+    Ok(())
+}
