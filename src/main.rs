@@ -90,6 +90,9 @@ async fn main() -> anyhow::Result<()> {
         Commands::Pull => {
             cli::commands::vcs::pull(cli.playlist.as_deref(), &plr_dir).await?;
         }
+        Commands::Diff { staged, remote } => {
+            cli::commands::vcs::diff_cmd(cli.playlist.as_deref(), &plr_dir, staged, remote).await?;
+        }
 
         _ => {
             println!("{:?}", cli.command);

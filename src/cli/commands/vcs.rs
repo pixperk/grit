@@ -186,3 +186,116 @@ pub async fn pull(playlist: Option<&str>, plr_dir: &Path) -> Result<()> {
 
     Ok(())
 }
+
+pub async fn diff_cmd(
+    playlist: Option<&str>,
+    plr_dir: &Path,
+    staged: bool,
+    remote: bool,
+) -> Result<()> {
+    let playlist_id = playlist.context("Playlist required (use --playlist)")?;
+
+    let snapshot_path = snapshot::snapshot_path(plr_dir, playlist_id);
+    if !snapshot_path.exists() {
+        bail!("Playlist not initialized. Run 'plr init' first.");
+    }
+
+    let local_snapshot = snapshot::load(&snapshot_path)?;
+
+    // Default to showing staged changes if no flag is specified
+    let show_staged = staged || !remote;
+
+    if show_staged {
+        println!("\n[Staged Changes]\n");
+
+        let patch = load_staged(plr_dir, playlist_id)?;
+
+        if patch.changes.is_empty() {
+            println!("No staged changes.\n");
+        } else {
+            for change in &patch.changes {
+                match change {
+                    crate::provider::TrackChange::Added { track, index } => {
+                        println!(
+                            "+ [{}] {} - {}",
+                            index,
+                            track.name,
+                            track.artists.join(", ")
+                        );
+                    }
+                    crate::provider::TrackChange::Removed { track, index } => {
+                        println!(
+                            "- [{}] {} - {}",
+                            index,
+                            track.name,
+                            track.artists.join(", ")
+                        );
+                    }
+                    crate::provider::TrackChange::Moved { track, from, to } => {
+                        println!(
+                            "~ {} - {} (from {} to {})",
+                            track.name,
+                            track.artists.join(", "),
+                            from,
+                            to
+                        );
+                    }
+                };
+            }
+            println!();
+        }
+    }
+
+    if remote {
+        println!("\n[Local vs Remote]\n");
+
+        let provider = create_provider(local_snapshot.provider, plr_dir)?;
+
+        match provider.fetch(playlist_id).await {
+            std::result::Result::Ok(remote_snapshot) => {
+                use crate::state::diff as compute_diff;
+                let patch = compute_diff(&remote_snapshot, &local_snapshot);
+
+                if patch.changes.is_empty() {
+                    println!("Local and remote are in sync.\n");
+                } else {
+                    for change in &patch.changes {
+                        match change {
+                            crate::provider::TrackChange::Added { track, index } => {
+                                println!(
+                                    "+ [{}] {} - {}",
+                                    index,
+                                    track.name,
+                                    track.artists.join(", ")
+                                );
+                            }
+                            crate::provider::TrackChange::Removed { track, index } => {
+                                println!(
+                                    "- [{}] {} - {}",
+                                    index,
+                                    track.name,
+                                    track.artists.join(", ")
+                                );
+                            }
+                            crate::provider::TrackChange::Moved { track, from, to } => {
+                                println!(
+                                    "~ {} - {} (from {} to {})",
+                                    track.name,
+                                    track.artists.join(", "),
+                                    from,
+                                    to
+                                );
+                            }
+                        }
+                    }
+                    println!();
+                }
+            }
+            Err(e) => {
+                println!("Could not fetch remote: {}\n", e);
+            }
+        }
+    }
+
+    Ok(())
+}
