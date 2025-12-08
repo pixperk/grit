@@ -351,6 +351,9 @@ pub async fn commit(message: &str, playlist: Option<&str>, plr_dir: &Path) -> Re
 
     let hash = snapshot::compute_hash(&snapshot_copy)?;
 
+    // Save snapshot by hash for revert functionality
+    snapshot::save_by_hash(&snapshot_copy, &hash, plr_dir, playlist_id)?;
+
     snapshot::save(&snapshot_copy, &snapshot_path)?;
 
     let journal_path = JournalEntry::journal_path(plr_dir, playlist_id);

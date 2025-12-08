@@ -128,4 +128,12 @@ pub enum Commands {
         /// Optional search query to filter by name/description
         query: Option<String>,
     },
+    /// Revert playlist to a previous commit state
+    Revert {
+        /// Commit hash to revert to (use 'plr log' to see hashes)
+        hash: String,
+        /// Playlist ID or use --playlist
+        #[arg(short = 'l', long)]
+        playlist: Option<String>,
+    },
 }
