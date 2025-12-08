@@ -123,4 +123,9 @@ pub enum Commands {
         /// Provider to check
         provider: ProviderKind,
     },
+    /// List or search locally tracked playlists
+    Playlists {
+        /// Optional search query to filter by name/description
+        query: Option<String>,
+    },
 }
