@@ -49,7 +49,14 @@ pub enum Commands {
         file: String,
     },
     /// Start playback
-    Play,
+    Play {
+        /// Playlist ID or use --playlist
+        #[arg(short = 'l', long)]
+        playlist: Option<String>,
+        /// Start with shuffle enabled
+        #[arg(short, long)]
+        shuffle: bool,
+    },
     /// Authenticate with a provider
     Auth {
         /// Provider to authenticate
