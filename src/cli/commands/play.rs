@@ -21,8 +21,8 @@ pub async fn run(playlist: Option<&str>, shuffle: bool, grit_dir: &Path) -> Resu
     }
 
     match snap.provider {
-        ProviderKind::Spotify => play_spotify(&snap, shuffle, grit_dir).await,
-        ProviderKind::Youtube => play_mpv(&snap, shuffle, grit_dir).await,
+        ProviderKind::Spotify => play_spotify(&snap, shuffle, grit_dir, &snapshot_path).await,
+        ProviderKind::Youtube => play_mpv(&snap, shuffle, grit_dir, &snapshot_path).await,
     }
 }
 
@@ -30,6 +30,7 @@ async fn play_spotify(
     snap: &crate::provider::PlaylistSnapshot,
     shuffle: bool,
     grit_dir: &Path,
+    snapshot_path: &Path,
 ) -> Result<()> {
     let token = credentials::load(grit_dir, ProviderKind::Spotify)?
         .context("No Spotify credentials. Run 'grit auth spotify' first.")?;
@@ -60,9 +61,13 @@ async fn play_spotify(
     let mut tui = Tui::new()?;
     let mut poll_counter = 0u8;
     let mut last_update = std::time::Instant::now();
+    let mut last_modified = std::fs::metadata(snapshot_path)
+        .and_then(|m| m.modified())
+        .ok();
 
     loop {
         tui.draw(&app)?;
+        poll_counter = poll_counter.wrapping_add(1);
 
         if !app.is_paused {
             let now = std::time::Instant::now();
@@ -70,7 +75,6 @@ async fn play_spotify(
             last_update = now;
             app.position_secs = (app.position_secs + elapsed).min(app.duration_secs);
 
-            poll_counter = poll_counter.wrapping_add(1);
             let should_poll = poll_counter % 30 == 0
                 || (app.position_secs >= app.duration_secs && app.duration_secs > 0.0);
 
@@ -102,6 +106,19 @@ async fn play_spotify(
                     app.current_index = 0;
                     app.position_secs = 0.0;
                     app.duration_secs = app.tracks[0].duration_ms as f64 / 1000.0;
+                }
+
+            }
+        }
+
+        if poll_counter % 50 == 0 {
+            let current_modified = std::fs::metadata(snapshot_path)
+                .and_then(|m| m.modified())
+                .ok();
+            if current_modified != last_modified {
+                if let Ok(new_snap) = snapshot::load(snapshot_path) {
+                    app.tracks = new_snap.tracks;
+                    last_modified = current_modified;
                 }
             }
         }
@@ -214,6 +231,7 @@ async fn play_mpv(
     snap: &crate::provider::PlaylistSnapshot,
     shuffle: bool,
     grit_dir: &Path,
+    snapshot_path: &Path,
 ) -> Result<()> {
     use crate::cli::commands::utils::create_provider;
 
@@ -232,6 +250,10 @@ async fn play_mpv(
     app.loading = true;
     let mut skip_position = 0u8;
     let mut last_seek = std::time::Instant::now();
+    let mut last_modified = std::fs::metadata(snapshot_path)
+        .and_then(|m| m.modified())
+        .ok();
+    let mut file_check_counter = 0u8;
 
     let mut tui = Tui::new()?;
     tui.draw(&app)?;
@@ -265,6 +287,20 @@ async fn play_mpv(
             }
         } else if skip_position > 0 {
             skip_position -= 1;
+        }
+
+        file_check_counter = file_check_counter.wrapping_add(1);
+        if file_check_counter % 100 == 0 {
+            let current_modified = std::fs::metadata(snapshot_path)
+                .and_then(|m| m.modified())
+                .ok();
+            if current_modified != last_modified {
+                if let Ok(new_snap) = snapshot::load(snapshot_path) {
+                    app.tracks = new_snap.tracks.clone();
+                    queue = Queue::new(new_snap.tracks);
+                    last_modified = current_modified;
+                }
+            }
         }
 
         if let Some(key) = tui.poll_key()? {
