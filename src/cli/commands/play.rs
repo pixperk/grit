@@ -59,12 +59,16 @@ async fn play_spotify(
 
     let mut tui = Tui::new()?;
     let mut poll_counter = 0u8;
+    let mut last_update = std::time::Instant::now();
 
     loop {
         tui.draw(&app)?;
 
         if !app.is_paused {
-            app.position_secs = (app.position_secs + 0.1).min(app.duration_secs);
+            let now = std::time::Instant::now();
+            let elapsed = now.duration_since(last_update).as_secs_f64();
+            last_update = now;
+            app.position_secs = (app.position_secs + elapsed).min(app.duration_secs);
 
             // Poll Spotify every ~3 seconds OR when track should have ended
             poll_counter = poll_counter.wrapping_add(1);
@@ -227,7 +231,8 @@ async fn play_mpv(
     let mut app = App::new(snap.name.clone(), snap.tracks.clone(), PlayerBackend::Mpv);
     app.shuffle = shuffle;
     app.loading = true;
-    let mut skip_position = 0u8; // Skip position queries after track change
+    let mut skip_position = 0u8; // Skip position queries right after track change
+    let mut last_seek = std::time::Instant::now(); // Track last seek to prevent rapid seeks
 
     let mut tui = Tui::new()?;
     tui.draw(&app)?;
@@ -236,13 +241,21 @@ async fn play_mpv(
         let yt_url = provider.playable_url(&track).await?;
         match fetch_audio_url(&yt_url).await {
             Ok(audio_url) => {
-                player.load(&audio_url).await?;
+                if let Err(e) = player.load(&audio_url).await {
+                    app.set_error(format!("Failed to load: {}", e));
+                } else {
+                    // Get actual duration from MPV (not YouTube metadata)
+                    if let Ok(Some(dur)) = player.get_duration().await {
+                        app.duration_secs = dur;
+                    } else {
+                        app.duration_secs = track.duration_ms as f64 / 1000.0;
+                    }
+                }
             }
             Err(e) => {
                 app.set_error(format!("Failed to load: {}", e));
             }
         }
-        app.duration_secs = track.duration_ms as f64 / 1000.0;
         // Find actual index in tracks list
         if let Some(idx) = app.tracks.iter().position(|t| t.id == track.id) {
             app.current_index = idx;
@@ -278,7 +291,19 @@ async fn play_mpv(
                     }
                 }
                 KeyCode::Char('n') => {
-                    if let Some(track) = queue.next().cloned() {
+                    use crate::playback::events::RepeatMode;
+
+                    let track = match queue.next() {
+                        Some(track) => Some(track.clone()),
+                        None if app.repeat_mode == RepeatMode::All => {
+                            // Reached end of playlist, wrap to beginning
+                            queue.jump_to(0);
+                            queue.current_track().cloned()
+                        }
+                        None => None,
+                    };
+
+                    if let Some(track) = track {
                         app.loading = true;
                         // Find actual index in tracks list and update immediately
                         if let Some(idx) = app.tracks.iter().position(|t| t.id == track.id) {
@@ -290,8 +315,15 @@ async fn play_mpv(
                         match provider.playable_url(&track).await {
                             Ok(yt_url) => match fetch_audio_url(&yt_url).await {
                                 Ok(audio_url) => {
+                                    // Clear stale events before loading
+                                    while player.try_recv_event().is_some() {}
                                     if let Err(e) = player.load(&audio_url).await {
                                         app.set_error(e.to_string());
+                                    } else {
+                                        // Get actual duration from MPV
+                                        if let Ok(Some(dur)) = player.get_duration().await {
+                                            app.duration_secs = dur;
+                                        }
                                     }
                                 }
                                 Err(e) => app.set_error(e.to_string()),
@@ -315,8 +347,15 @@ async fn play_mpv(
                         match provider.playable_url(&track).await {
                             Ok(yt_url) => match fetch_audio_url(&yt_url).await {
                                 Ok(audio_url) => {
+                                    // Clear stale events before loading
+                                    while player.try_recv_event().is_some() {}
                                     if let Err(e) = player.load(&audio_url).await {
                                         app.set_error(e.to_string());
+                                    } else {
+                                        // Get actual duration from MPV
+                                        if let Ok(Some(dur)) = player.get_duration().await {
+                                            app.duration_secs = dur;
+                                        }
                                     }
                                 }
                                 Err(e) => app.set_error(e.to_string()),
@@ -332,14 +371,35 @@ async fn play_mpv(
                     app.shuffle = !app.shuffle;
                 }
                 KeyCode::Char('r') => {
-                    queue.cycle_repeat();
+                    // Only update app repeat mode, not queue
+                    // Queue stays in None mode so manual navigation always works
                     app.cycle_repeat();
                 }
                 KeyCode::Left => {
-                    let _ = player.seek(-5).await;
+                    // Debounce seeks to prevent overwhelming MPV
+                    let now = std::time::Instant::now();
+                    if now.duration_since(last_seek).as_millis() >= 150 {
+                        if let Err(e) = player.seek(-5).await {
+                            app.set_error(e.to_string());
+                        } else {
+                            app.position_secs = (app.position_secs - 5.0).max(0.0);
+                            skip_position = 3;
+                            last_seek = now;
+                        }
+                    }
                 }
                 KeyCode::Right => {
-                    let _ = player.seek(5).await;
+                    // Debounce seeks to prevent overwhelming MPV
+                    let now = std::time::Instant::now();
+                    if now.duration_since(last_seek).as_millis() >= 150 {
+                        if let Err(e) = player.seek(5).await {
+                            app.set_error(e.to_string());
+                        } else {
+                            app.position_secs = (app.position_secs + 5.0).min(app.duration_secs);
+                            skip_position = 3;
+                            last_seek = now;
+                        }
+                    }
                 }
                 KeyCode::Up => {
                     app.select_prev();
@@ -360,8 +420,15 @@ async fn play_mpv(
                             match provider.playable_url(&track).await {
                                 Ok(yt_url) => match fetch_audio_url(&yt_url).await {
                                     Ok(audio_url) => {
+                                        // Clear stale events before loading
+                                        while player.try_recv_event().is_some() {}
                                         if let Err(e) = player.load(&audio_url).await {
                                             app.set_error(e.to_string());
+                                        } else {
+                                            // Get actual duration from MPV
+                                            if let Ok(Some(dur)) = player.get_duration().await {
+                                                app.duration_secs = dur;
+                                            }
                                         }
                                     }
                                     Err(e) => app.set_error(e.to_string()),
@@ -386,7 +453,15 @@ async fn play_mpv(
                 let track = if app.repeat_mode == RepeatMode::One {
                     queue.current_track().cloned()
                 } else {
-                    queue.next().cloned()
+                    match queue.next() {
+                        Some(track) => Some(track.clone()),
+                        None if app.repeat_mode == RepeatMode::All => {
+                            // Reached end of playlist, wrap to beginning
+                            queue.jump_to(0);
+                            queue.current_track().cloned()
+                        }
+                        None => None,
+                    }
                 };
 
                 if let Some(track) = track {
@@ -398,13 +473,25 @@ async fn play_mpv(
                     app.position_secs = 0.0;
                     app.duration_secs = track.duration_ms as f64 / 1000.0;
                     tui.draw(&app)?;
+
                     if let Ok(yt_url) = provider.playable_url(&track).await {
                         match fetch_audio_url(&yt_url).await {
                             Ok(audio_url) => {
-                                let _ = player.load(&audio_url).await;
+                                // Clear all stale events before loading to ensure clean state
+                                while player.try_recv_event().is_some() {}
+                                if let Err(e) = player.load(&audio_url).await {
+                                    app.set_error(e.to_string());
+                                } else {
+                                    // Get actual duration from MPV
+                                    if let Ok(Some(dur)) = player.get_duration().await {
+                                        app.duration_secs = dur;
+                                    }
+                                }
                             }
                             Err(e) => app.set_error(e.to_string()),
                         }
+                    } else {
+                        app.set_error("Failed to get playable URL".to_string());
                     }
                     app.loading = false;
                     skip_position = 5;

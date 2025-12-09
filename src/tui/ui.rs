@@ -152,12 +152,12 @@ fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
             Line::from(""),
             Line::from(Span::styled("fetching track", Style::default().fg(SAKURA_DIM))),
         ]
-    } else if app.error.is_some() {
+    } else if let Some(error) = &app.error {
         vec![
             Line::from(""),
             Line::from(Span::styled("uh oh!", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD))),
             Line::from(""),
-            Line::from(Span::styled("failed to load track", Style::default().fg(SAKURA_DIM))),
+            Line::from(Span::styled(error.as_str(), Style::default().fg(SAKURA_DIM))),
         ]
     } else {
         let (title, artists) = app
