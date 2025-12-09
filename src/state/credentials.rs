@@ -56,6 +56,7 @@ pub fn load(grit_dir: &Path, provider: ProviderKind) -> Result<Option<OAuthToken
     Ok(Some(token))
 }
 
+#[allow(dead_code)]
 pub fn is_expired(token: &OAuthToken) -> bool {
     match token.expires_at {
         Some(expires_at) => {

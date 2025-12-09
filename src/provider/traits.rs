@@ -1,11 +1,8 @@
-use crate::provider::{DiffPatch, OAuthToken, PlaylistSnapshot, ProviderKind, Track};
+use crate::provider::{DiffPatch, OAuthToken, PlaylistSnapshot, Track};
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait Provider: Send + Sync {
-    /// Returns the provider type
-    fn kind(&self) -> ProviderKind;
-
     /// Fetch playlist snapshot from remote
     async fn fetch(&self, playlist_id: &str) -> anyhow::Result<PlaylistSnapshot>;
 

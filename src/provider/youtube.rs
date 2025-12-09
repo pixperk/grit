@@ -36,20 +36,12 @@ struct YoutubePlaylistResponse {
 struct YoutubePlaylist {
     id: String,
     snippet: YoutubePlaylistSnippet,
-    #[serde(rename = "contentDetails")]
-    content_details: Option<YoutubeContentDetails>,
 }
 
 #[derive(Deserialize)]
 struct YoutubePlaylistSnippet {
     title: String,
     description: Option<String>,
-}
-
-#[derive(Deserialize)]
-struct YoutubeContentDetails {
-    #[serde(rename = "itemCount")]
-    item_count: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -87,7 +79,6 @@ struct YoutubeVideoResponse {
 
 #[derive(Deserialize)]
 struct YoutubeVideo {
-    id: String,
     snippet: YoutubeVideoSnippet,
     #[serde(rename = "contentDetails")]
     content_details: YoutubeVideoContentDetails,
@@ -280,10 +271,6 @@ impl YoutubeProvider {
 
 #[async_trait]
 impl Provider for YoutubeProvider {
-    fn kind(&self) -> ProviderKind {
-        ProviderKind::Youtube
-    }
-
     fn oauth_url(&self, redirect_uri: &str, state: &str) -> String {
         let scopes = "https://www.googleapis.com/auth/youtube.force-ssl";
 
@@ -529,7 +516,6 @@ impl Provider for YoutubeProvider {
         #[derive(Deserialize)]
         struct SearchItem {
             id: SearchId,
-            snippet: YoutubeItemSnippet,
         }
 
         #[derive(Deserialize)]

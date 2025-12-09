@@ -211,10 +211,6 @@ impl SpotifyProvider {
 
 #[async_trait]
 impl Provider for SpotifyProvider {
-    fn kind(&self) -> ProviderKind {
-        ProviderKind::Spotify
-    }
-
     fn oauth_url(&self, redirect_uri: &str, state: &str) -> String {
         let scopes = [
             "playlist-read-private",

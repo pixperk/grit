@@ -44,6 +44,7 @@ pub fn stage_change(grit_dir: &Path, playlist_id: &str, change: TrackChange) -> 
     save_staged(grit_dir, playlist_id, &patch)
 }
 
+#[allow(dead_code)]
 pub fn has_staged_changes(grit_dir: &Path, playlist_id: &str) -> Result<bool> {
     let patch = load_staged(grit_dir, playlist_id)?;
     Ok(!patch.changes.is_empty())

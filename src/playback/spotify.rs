@@ -32,8 +32,6 @@ struct Device {
     id: Option<String>,
     name: String,
     is_active: bool,
-    #[serde(rename = "type")]
-    device_type: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -271,11 +269,6 @@ impl SpotifyPlayer {
         Ok(())
     }
 
-    /// Play a single track
-    pub async fn play_track(&self, uri: &str) -> Result<()> {
-        self.play(vec![uri.to_string()], 0).await
-    }
-
     /// Pause playback
     pub async fn pause(&self) -> Result<()> {
         let token = self.get_token().await?;
@@ -374,25 +367,6 @@ impl SpotifyPlayer {
             let text = resp.text().await.unwrap_or_default();
             bail!("{}", parse_spotify_error(&text));
         }
-        Ok(())
-    }
-
-    /// Set volume (0-100)
-    pub async fn set_volume(&self, volume: u8) -> Result<()> {
-        let token = self.get_token().await?;
-        let device_id = self.device_id.as_ref().context("No device selected")?;
-        let vol = volume.min(100);
-
-        self.http
-            .put(format!(
-                "{}/me/player/volume?device_id={}&volume_percent={}",
-                API_BASE, device_id, vol
-            ))
-            .bearer_auth(&token)
-            .header("Content-Length", "0")
-            .send()
-            .await?;
-
         Ok(())
     }
 

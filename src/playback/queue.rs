@@ -80,26 +80,6 @@ impl Queue {
             .unwrap_or(0);
     }
 
-    pub fn cycle_repeat(&mut self) {
-        self.repeat = match self.repeat {
-            RepeatMode::None => RepeatMode::All,
-            RepeatMode::All => RepeatMode::One,
-            RepeatMode::One => RepeatMode::None,
-        };
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.tracks.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.tracks.len()
-    }
-
-    pub fn position(&self) -> usize {
-        self.current
-    }
-
     pub fn jump_to(&mut self, index: usize) -> Option<&Track> {
         if index < self.play_order.len() {
             self.current = index;

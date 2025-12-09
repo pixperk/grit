@@ -129,9 +129,32 @@ async fn play_spotify(
         }
 
         if let Some(key) = tui.poll_key()? {
+            if app.is_seeking() {
+                match key {
+                    KeyCode::Esc => app.cancel_seeking(),
+                    KeyCode::Enter => {
+                        if let Some(secs) = app.get_seek_position() {
+                            if let Err(e) = player.seek(secs as u64).await {
+                                app.set_error(e.to_string());
+                            } else {
+                                app.position_secs = secs;
+                            }
+                        }
+                        app.cancel_seeking();
+                    }
+                    KeyCode::Left => app.seek_backward(5.0),
+                    KeyCode::Right => app.seek_forward(5.0),
+                    _ => {}
+                }
+                continue;
+            }
+
             app.clear_error();
             match key {
                 KeyCode::Char('q') => break,
+                KeyCode::Char('g') => {
+                    app.start_seeking();
+                }
                 KeyCode::Char(' ') => {
                     app.is_paused = !app.is_paused;
                     let res = if app.is_paused {
@@ -311,9 +334,33 @@ async fn play_mpv(
         }
 
         if let Some(key) = tui.poll_key()? {
+            if app.is_seeking() {
+                match key {
+                    KeyCode::Esc => app.cancel_seeking(),
+                    KeyCode::Enter => {
+                        if let Some(secs) = app.get_seek_position() {
+                            if let Err(e) = player.seek_absolute(secs).await {
+                                app.set_error(e.to_string());
+                            } else {
+                                app.position_secs = secs;
+                                skip_position = 3;
+                            }
+                        }
+                        app.cancel_seeking();
+                    }
+                    KeyCode::Left => app.seek_backward(5.0),
+                    KeyCode::Right => app.seek_forward(5.0),
+                    _ => {}
+                }
+                continue;
+            }
+
             app.clear_error();
             match key {
                 KeyCode::Char('q') => break,
+                KeyCode::Char('g') => {
+                    app.start_seeking();
+                }
                 KeyCode::Char(' ') => {
                     app.is_paused = !app.is_paused;
                     let res = if app.is_paused {

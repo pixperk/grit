@@ -222,6 +222,10 @@ mod unix {
             self.send_command(vec![json!("seek"), json!(seconds), json!("relative")]).await
         }
 
+        pub async fn seek_absolute(&mut self, seconds: f64) -> Result<()> {
+            self.send_command(vec![json!("seek"), json!(seconds), json!("absolute")]).await
+        }
+
         pub async fn observe_eof_reached(&mut self) -> Result<()> {
             self.send_command(vec![json!("observe_property"), json!(4), json!("eof-reached")]).await
         }

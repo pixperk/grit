@@ -17,7 +17,6 @@ use ratatui::{
 use super::App;
 
 const SAKURA_PINK: Color = Color::Rgb(255, 183, 197);
-const SAKURA_DEEP: Color = Color::Rgb(255, 105, 180);
 const SAKURA_SOFT: Color = Color::Rgb(255, 218, 233);
 const SEA_GREEN: Color = Color::Rgb(95, 158, 160);
 const SEA_GREEN_BRIGHT: Color = Color::Rgb(120, 190, 192);
@@ -180,8 +179,17 @@ fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_progress(frame: &mut Frame, app: &App, area: Rect) {
-    if app.error.is_some() {
-        // Show empty progress on error
+    if app.is_seeking() {
+        let seek_pos = app.get_seek_position().unwrap_or(0.0);
+        let pos = App::format_time(seek_pos);
+        let dur = App::format_time(app.duration_secs);
+        let label = format!("seek: {} / {} (<-/-> to move, enter to confirm, esc to cancel)", pos, dur);
+        let gauge = Gauge::default()
+            .gauge_style(Style::default().fg(SAKURA_PINK).bg(Color::Rgb(50, 50, 55)))
+            .ratio(app.seek_progress())
+            .label(Span::styled(label, Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD)));
+        frame.render_widget(gauge, area);
+    } else if app.error.is_some() {
         let gauge = Gauge::default()
             .gauge_style(Style::default().fg(Color::Rgb(80, 80, 85)).bg(Color::Rgb(50, 50, 55)))
             .ratio(0.0)
@@ -299,23 +307,36 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
     frame.render_widget(list, area);
 }
 
-fn draw_controls(frame: &mut Frame, _app: &App, area: Rect) {
-    let controls = Line::from(vec![
-        Span::styled("[space]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" pause ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[↑/↓]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" select ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[enter]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" play ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[n/p]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" skip ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[s]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" shuffle ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[r]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" repeat ", Style::default().fg(SAKURA_DIM)),
-        Span::styled("[q]", Style::default().fg(SAKURA_PINK)),
-        Span::styled(" quit", Style::default().fg(SAKURA_DIM)),
-    ]);
+fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
+    let controls = if app.is_seeking() {
+        Line::from(vec![
+            Span::styled("[←→]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" ±5s ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[enter]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" confirm ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[esc]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" cancel", Style::default().fg(SAKURA_DIM)),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled("[space]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" pause ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[n/p]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" skip ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[←→]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" ±5s ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[g]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" seek ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[s]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" shuffle ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[r]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" repeat ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[↑↓]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" select ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[q]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" quit", Style::default().fg(SAKURA_DIM)),
+        ])
+    };
 
     let block = Block::default()
         .borders(Borders::TOP)

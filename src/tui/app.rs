@@ -19,6 +19,7 @@ pub struct App {
     pub backend: PlayerBackend,
     pub error: Option<String>,
     pub loading: bool,
+    pub seek_position: Option<f64>, // For goto mode (g key) - target position in seconds
 }
 
 impl App {
@@ -37,6 +38,7 @@ impl App {
             backend,
             error: None,
             loading: false,
+            seek_position: None,
         }
     }
 
@@ -88,6 +90,7 @@ impl App {
         self.selected_index = self.selected_index.saturating_sub(1);
     }
 
+    #[allow(dead_code)]
     pub fn selected_track(&self) -> Option<&Track> {
         self.tracks.get(self.selected_index)
     }
@@ -98,5 +101,42 @@ impl App {
             RepeatMode::All => RepeatMode::One,
             RepeatMode::One => RepeatMode::None,
         };
+    }
+
+    pub fn start_seeking(&mut self) {
+        self.seek_position = Some(self.position_secs);
+    }
+
+    pub fn cancel_seeking(&mut self) {
+        self.seek_position = None;
+    }
+
+    pub fn seek_forward(&mut self, secs: f64) {
+        if let Some(ref mut pos) = self.seek_position {
+            *pos = (*pos + secs).min(self.duration_secs);
+        }
+    }
+
+    pub fn seek_backward(&mut self, secs: f64) {
+        if let Some(ref mut pos) = self.seek_position {
+            *pos = (*pos - secs).max(0.0);
+        }
+    }
+
+    pub fn get_seek_position(&self) -> Option<f64> {
+        self.seek_position
+    }
+
+    pub fn is_seeking(&self) -> bool {
+        self.seek_position.is_some()
+    }
+
+    pub fn seek_progress(&self) -> f64 {
+        if let Some(pos) = self.seek_position {
+            if self.duration_secs > 0.0 {
+                return (pos / self.duration_secs).min(1.0);
+            }
+        }
+        self.progress()
     }
 }
