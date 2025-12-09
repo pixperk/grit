@@ -72,14 +72,35 @@ async fn play_spotify(
                 || (app.position_secs >= app.duration_secs && app.duration_secs > 0.0);
 
             if should_poll {
+                use crate::playback::events::RepeatMode;
+
                 if let Ok(Some((name, _))) = player.get_currently_playing().await {
                     if app.current_track().map(|t| &t.name) != Some(&name) {
                         if let Some(idx) = app.tracks.iter().position(|t| t.name == name) {
-                            app.current_index = idx;
-                            app.position_secs = 0.0;
-                            app.duration_secs = app.tracks[idx].duration_ms as f64 / 1000.0;
+                            // Handle repeat one - force back to current track
+                            if app.repeat_mode == RepeatMode::One {
+                                let current_idx = app.current_index;
+                                let uris: Vec<String> = app.tracks.iter()
+                                    .map(|t| format!("spotify:track:{}", t.id))
+                                    .collect();
+                                let _ = player.play(uris, current_idx).await;
+                                app.position_secs = 0.0;
+                            } else {
+                                app.current_index = idx;
+                                app.position_secs = 0.0;
+                                app.duration_secs = app.tracks[idx].duration_ms as f64 / 1000.0;
+                            }
                         }
                     }
+                } else if app.repeat_mode == RepeatMode::All && app.current_index == app.tracks.len() - 1 {
+                    // Nothing playing and we were at the last track - restart playlist
+                    let uris: Vec<String> = app.tracks.iter()
+                        .map(|t| format!("spotify:track:{}", t.id))
+                        .collect();
+                    let _ = player.play(uris, 0).await;
+                    app.current_index = 0;
+                    app.position_secs = 0.0;
+                    app.duration_secs = app.tracks[0].duration_ms as f64 / 1000.0;
                 }
             }
         }
@@ -132,6 +153,9 @@ async fn play_spotify(
                     if let Err(e) = player.set_shuffle(app.shuffle).await {
                         app.set_error(e.to_string());
                     }
+                }
+                KeyCode::Char('r') => {
+                    app.cycle_repeat();
                 }
                 KeyCode::Left => {
                     let new_pos = (app.position_secs - 5.0).max(0.0);
@@ -198,6 +222,7 @@ async fn play_mpv(
     }
 
     let mut player = MpvPlayer::spawn().await?;
+    player.observe_eof_reached().await?;
 
     let mut app = App::new(snap.name.clone(), snap.tracks.clone(), PlayerBackend::Mpv);
     app.shuffle = shuffle;
@@ -306,6 +331,10 @@ async fn play_mpv(
                     queue.toggle_shuffle();
                     app.shuffle = !app.shuffle;
                 }
+                KeyCode::Char('r') => {
+                    queue.cycle_repeat();
+                    app.cycle_repeat();
+                }
                 KeyCode::Left => {
                     let _ = player.seek(-5).await;
                 }
@@ -351,7 +380,16 @@ async fn play_mpv(
         // Check for track end and auto-advance
         while let Some(event) = player.try_recv_event() {
             if MpvPlayer::is_track_finished(&event) {
-                if let Some(track) = queue.next().cloned() {
+                use crate::playback::events::RepeatMode;
+
+                // In repeat one mode, replay current track instead of advancing
+                let track = if app.repeat_mode == RepeatMode::One {
+                    queue.current_track().cloned()
+                } else {
+                    queue.next().cloned()
+                };
+
+                if let Some(track) = track {
                     app.loading = true;
                     // Find actual index in tracks list and update immediately
                     if let Some(idx) = app.tracks.iter().position(|t| t.id == track.id) {

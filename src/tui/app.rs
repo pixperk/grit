@@ -1,3 +1,4 @@
+use crate::playback::events::RepeatMode;
 use crate::provider::Track;
 
 pub enum PlayerBackend {
@@ -12,6 +13,7 @@ pub struct App {
     pub selected_index: usize, // For playlist navigation
     pub is_paused: bool,
     pub shuffle: bool,
+    pub repeat_mode: RepeatMode,
     pub position_secs: f64,
     pub duration_secs: f64,
     pub backend: PlayerBackend,
@@ -29,6 +31,7 @@ impl App {
             selected_index: 0,
             is_paused: false,
             shuffle: false,
+            repeat_mode: RepeatMode::None,
             position_secs: 0.0,
             duration_secs: duration,
             backend,
@@ -42,7 +45,15 @@ impl App {
     }
 
     pub fn next_track(&self) -> Option<&Track> {
-        self.tracks.get(self.current_index + 1)
+        let next_idx = self.current_index + 1;
+        if next_idx < self.tracks.len() {
+            self.tracks.get(next_idx)
+        } else if self.repeat_mode == RepeatMode::All {
+            // Wrap around to first track
+            self.tracks.first()
+        } else {
+            None
+        }
     }
 
     pub fn progress(&self) -> f64 {
@@ -79,5 +90,13 @@ impl App {
 
     pub fn selected_track(&self) -> Option<&Track> {
         self.tracks.get(self.selected_index)
+    }
+
+    pub fn cycle_repeat(&mut self) {
+        self.repeat_mode = match self.repeat_mode {
+            RepeatMode::None => RepeatMode::All,
+            RepeatMode::All => RepeatMode::One,
+            RepeatMode::One => RepeatMode::None,
+        };
     }
 }

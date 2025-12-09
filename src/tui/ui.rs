@@ -199,11 +199,32 @@ fn draw_progress(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
+    use crate::playback::events::RepeatMode;
+
     let content = if app.shuffle {
+        let repeat_text = match app.repeat_mode {
+            RepeatMode::None => "",
+            RepeatMode::All => " | repeat all",
+            RepeatMode::One => " | repeat one",
+        };
         vec![
-            Line::from(Span::styled("shuffle", Style::default().fg(SAKURA_PINK))),
+            Line::from(vec![
+                Span::styled("shuffle", Style::default().fg(SAKURA_PINK)),
+                Span::styled(repeat_text, Style::default().fg(SAKURA_PINK)),
+            ]),
             Line::from(""),
             Line::from(Span::styled("next track is random", Style::default().fg(SAKURA_DIM))),
+        ]
+    } else if app.repeat_mode == RepeatMode::One {
+        let (title, artists) = app
+            .current_track()
+            .map(|t| (t.name.clone(), t.artists.join(", ")))
+            .unwrap_or(("—".into(), String::new()));
+
+        vec![
+            Line::from(Span::styled("repeat one", Style::default().fg(SAKURA_PINK))),
+            Line::from(""),
+            Line::from(Span::styled(format!("{} - {}", title, artists), Style::default().fg(SAKURA_DIM))),
         ]
     } else {
         let (title, artists) = app
@@ -211,8 +232,14 @@ fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
             .map(|t| (t.name.clone(), t.artists.join(", ")))
             .unwrap_or(("—".into(), String::new()));
 
+        let header = if app.repeat_mode == RepeatMode::All {
+            "next up | repeat all"
+        } else {
+            "next up"
+        };
+
         vec![
-            Line::from(Span::styled("next up", Style::default().fg(SAKURA_DIM))),
+            Line::from(Span::styled(header, Style::default().fg(SAKURA_DIM))),
             Line::from(""),
             Line::from(Span::styled(format!("{} - {}", title, artists), Style::default().fg(SAKURA_DIM))),
         ]
@@ -279,6 +306,10 @@ fn draw_controls(frame: &mut Frame, _app: &App, area: Rect) {
         Span::styled(" play ", Style::default().fg(SAKURA_DIM)),
         Span::styled("[n/p]", Style::default().fg(SAKURA_PINK)),
         Span::styled(" skip ", Style::default().fg(SAKURA_DIM)),
+        Span::styled("[s]", Style::default().fg(SAKURA_PINK)),
+        Span::styled(" shuffle ", Style::default().fg(SAKURA_DIM)),
+        Span::styled("[r]", Style::default().fg(SAKURA_PINK)),
+        Span::styled(" repeat ", Style::default().fg(SAKURA_DIM)),
         Span::styled("[q]", Style::default().fg(SAKURA_PINK)),
         Span::styled(" quit", Style::default().fg(SAKURA_DIM)),
     ]);

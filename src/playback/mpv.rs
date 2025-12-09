@@ -308,6 +308,12 @@ mod unix {
                 .await
         }
 
+        /// Subscribe to eof-reached (end of file)
+        pub async fn observe_eof_reached(&mut self) -> Result<()> {
+            self.send_command(vec![json!("observe_property"), json!(4), json!("eof-reached")])
+                .await
+        }
+
         /// Get next event (non-blocking)
         pub fn try_recv_event(&mut self) -> Option<MpvEvent> {
             self.event_rx.try_recv().ok()
@@ -341,7 +347,18 @@ mod unix {
 
         /// Check if track ended naturally (not stopped/error)
         pub fn is_track_finished(event: &MpvEvent) -> bool {
-            event.event == "end-file" && event.reason.as_deref() == Some("eof")
+            if event.event == "end-file" && event.reason.as_deref() == Some("eof") {
+                return true;
+            }
+            // Also check for eof-reached property change
+            if event.event == "property-change" && event.id == Some(4) {
+                if let Some(data) = &event.data {
+                    if let Some(eof_reached) = data.as_bool() {
+                        return eof_reached;
+                    }
+                }
+            }
+            false
         }
 
         /// Quit mpv gracefully

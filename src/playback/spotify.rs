@@ -418,6 +418,34 @@ impl SpotifyPlayer {
         Ok(())
     }
 
+    /// Set repeat mode
+    pub async fn set_repeat(&self, mode: crate::playback::events::RepeatMode) -> Result<()> {
+        let token = self.get_token().await?;
+        let device_id = self.device_id.as_ref().context("No device selected")?;
+
+        let state = match mode {
+            crate::playback::events::RepeatMode::None => "off",
+            crate::playback::events::RepeatMode::All => "context",
+            crate::playback::events::RepeatMode::One => "track",
+        };
+
+        let resp = self.http
+            .put(format!(
+                "{}/me/player/repeat?device_id={}&state={}",
+                API_BASE, device_id, state
+            ))
+            .bearer_auth(&token)
+            .header("Content-Length", "0")
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let text = resp.text().await.unwrap_or_default();
+            bail!("{}", parse_spotify_error(&text));
+        }
+        Ok(())
+    }
+
     /// Get currently playing track info
     pub async fn get_currently_playing(&self) -> Result<Option<(String, String)>> {
         let token = self.get_token().await?;
