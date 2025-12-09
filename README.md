@@ -48,6 +48,15 @@ cd grit
 cargo build --release
 ```
 
+### Nix
+
+If you have Nix installed (or on NixOS), you can run it directly:
+
+```bash
+# Compiles from source, includes dependencies
+nix run github:pixperk/grit
+```
+
 ### Environment Variables
 
 Create a `.env` file or export these:
