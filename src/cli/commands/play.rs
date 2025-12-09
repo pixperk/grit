@@ -86,7 +86,9 @@ async fn play_spotify(
                         if let Some(idx) = app.tracks.iter().position(|t| t.name == name) {
                             if app.repeat_mode == RepeatMode::One {
                                 let current_idx = app.current_index;
-                                let uris: Vec<String> = app.tracks.iter()
+                                let uris: Vec<String> = app
+                                    .tracks
+                                    .iter()
                                     .map(|t| format!("spotify:track:{}", t.id))
                                     .collect();
                                 let _ = player.play(uris, current_idx).await;
@@ -98,8 +100,12 @@ async fn play_spotify(
                             }
                         }
                     }
-                } else if app.repeat_mode == RepeatMode::All && app.current_index == app.tracks.len() - 1 {
-                    let uris: Vec<String> = app.tracks.iter()
+                } else if app.repeat_mode == RepeatMode::All
+                    && app.current_index == app.tracks.len() - 1
+                {
+                    let uris: Vec<String> = app
+                        .tracks
+                        .iter()
                         .map(|t| format!("spotify:track:{}", t.id))
                         .collect();
                     let _ = player.play(uris, 0).await;
@@ -107,7 +113,6 @@ async fn play_spotify(
                     app.position_secs = 0.0;
                     app.duration_secs = app.tracks[0].duration_ms as f64 / 1000.0;
                 }
-
             }
         }
 
@@ -205,7 +210,9 @@ async fn play_spotify(
                 KeyCode::Enter => {
                     let idx = app.selected_index;
                     if idx != app.current_index && idx < app.tracks.len() {
-                        let uris: Vec<String> = app.tracks.iter()
+                        let uris: Vec<String> = app
+                            .tracks
+                            .iter()
                             .map(|t| format!("spotify:track:{}", t.id))
                             .collect();
                         if let Err(e) = player.play(uris, idx).await {
