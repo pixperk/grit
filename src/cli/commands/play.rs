@@ -246,19 +246,13 @@ async fn play_mpv(
             Ok(audio_url) => {
                 if let Err(e) = player.load(&audio_url).await {
                     app.set_error(format!("Failed to load: {}", e));
-                } else {
-                    // Get actual duration from MPV (not YouTube metadata)
-                    if let Ok(Some(dur)) = player.get_duration().await {
-                        app.duration_secs = dur;
-                    } else {
-                        app.duration_secs = track.duration_ms as f64 / 1000.0;
-                    }
                 }
             }
             Err(e) => {
                 app.set_error(format!("Failed to load: {}", e));
             }
         }
+        app.duration_secs = track.duration_ms as f64 / 1000.0;
         // Find actual index in tracks list
         if let Some(idx) = app.tracks.iter().position(|t| t.id == track.id) {
             app.current_index = idx;
@@ -322,11 +316,6 @@ async fn play_mpv(
                                     while player.try_recv_event().is_some() {}
                                     if let Err(e) = player.load(&audio_url).await {
                                         app.set_error(e.to_string());
-                                    } else {
-                                        // Get actual duration from MPV
-                                        if let Ok(Some(dur)) = player.get_duration().await {
-                                            app.duration_secs = dur;
-                                        }
                                     }
                                 }
                                 Err(e) => app.set_error(e.to_string()),
@@ -354,11 +343,6 @@ async fn play_mpv(
                                     while player.try_recv_event().is_some() {}
                                     if let Err(e) = player.load(&audio_url).await {
                                         app.set_error(e.to_string());
-                                    } else {
-                                        // Get actual duration from MPV
-                                        if let Ok(Some(dur)) = player.get_duration().await {
-                                            app.duration_secs = dur;
-                                        }
                                     }
                                 }
                                 Err(e) => app.set_error(e.to_string()),
@@ -427,11 +411,6 @@ async fn play_mpv(
                                         while player.try_recv_event().is_some() {}
                                         if let Err(e) = player.load(&audio_url).await {
                                             app.set_error(e.to_string());
-                                        } else {
-                                            // Get actual duration from MPV
-                                            if let Ok(Some(dur)) = player.get_duration().await {
-                                                app.duration_secs = dur;
-                                            }
                                         }
                                     }
                                     Err(e) => app.set_error(e.to_string()),
@@ -484,11 +463,6 @@ async fn play_mpv(
                                 while player.try_recv_event().is_some() {}
                                 if let Err(e) = player.load(&audio_url).await {
                                     app.set_error(e.to_string());
-                                } else {
-                                    // Get actual duration from MPV
-                                    if let Ok(Some(dur)) = player.get_duration().await {
-                                        app.duration_secs = dur;
-                                    }
                                 }
                             }
                             Err(e) => app.set_error(e.to_string()),

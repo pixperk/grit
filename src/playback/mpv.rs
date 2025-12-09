@@ -230,6 +230,9 @@ mod unix {
             // Give MPV a moment to start
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+            // Drain stale results from the channel to prevent get_position() from getting old values
+            while self.result_rx.try_recv().is_ok() {}
+
             Ok(())
         }
 
