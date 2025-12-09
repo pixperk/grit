@@ -221,7 +221,37 @@ mod unix {
 
         /// Load and play a URL/file
         pub async fn load(&mut self, url: &str) -> Result<()> {
-            self.send_command(vec![json!("loadfile"), json!(url)]).await
+            // Use 'replace' mode to clear old track state
+            self.send_command(vec![json!("loadfile"), json!(url), json!("replace")]).await?;
+
+            // Wait for MPV to send playback-restart event
+            let timeout = tokio::time::Instant::now() + tokio::time::Duration::from_secs(3);
+            let mut got_restart = false;
+            while tokio::time::Instant::now() < timeout {
+                if let Ok(event) = self.event_rx.try_recv() {
+                    if event.event == "playback-restart" {
+                        got_restart = true;
+                        break;
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+            }
+
+            // Even after playback-restart, time-pos might not be immediately updated
+            // Verify by querying time-pos until it's actually reset
+            if got_restart {
+                for _ in 0..20 {
+                    if let Ok(Some(pos)) = self.get_position().await {
+                        if pos < 1.0 {
+                            // Position has been properly reset
+                            return Ok(());
+                        }
+                    }
+                    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+                }
+            }
+
+            Ok(())
         }
 
         /// Pause playback

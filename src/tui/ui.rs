@@ -145,7 +145,14 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
-    let content = if app.error.is_some() {
+    let content = if app.loading {
+        vec![
+            Line::from(""),
+            Line::from(Span::styled("loading...", Style::default().fg(SAKURA_PINK).add_modifier(Modifier::BOLD))),
+            Line::from(""),
+            Line::from(Span::styled("fetching track", Style::default().fg(SAKURA_DIM))),
+        ]
+    } else if app.error.is_some() {
         vec![
             Line::from(""),
             Line::from(Span::styled("uh oh!", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD))),
