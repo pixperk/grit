@@ -160,6 +160,9 @@ async fn play_spotify(
                 }
                 KeyCode::Char('r') => {
                     app.cycle_repeat();
+                    if let Err(e) = player.set_repeat(app.repeat_mode).await {
+                        app.set_error(e.to_string());
+                    }
                 }
                 KeyCode::Left => {
                     let new_pos = (app.position_secs - 5.0).max(0.0);
