@@ -18,6 +18,7 @@ grit play -l 37i9dqef...
 - **Version Control** - Track playlist changes with git-like commands (init, commit, push, pull, diff, log)
 - **Multi-Provider** - Supports Spotify and YouTube playlists
 - **TUI Player** - Beautiful terminal interface with progress bar, queue, and controls
+- **Synced Lyrics** - Real-time lyrics display via LRCLIB (works with both Spotify and YouTube)
 - **Staging Area** - Stage changes before committing (add, remove, move tracks)
 - **Offline-First** - Local state with on-demand remote sync
 - **Live Reload** - TUI updates when playlist file changes externally
@@ -151,22 +152,50 @@ grit play -l 37i9dqef1DX...
 |  next up                       |                 |
 |  Next Track - Next Artist      |                 |
 +--------------------------------+-----------------+
-|  [space] pause  [n/p] next/prev  [s] shuffle    |
-|  [r] repeat  [arrows] select  [enter] play  [q] |
+|  [space] pause  [n/p] skip  [g] goto  [/] search |
+|  [l] lyrics  [s] shuffle  [r] repeat  [q] quit   |
 +--------------------------------------------------+
 ```
+
+### Main Controls
 
 | Key | Action |
 |-----|--------|
 | `space` | Pause/Resume |
-| `n` | Next track |
-| `p` | Previous track |
+| `n` / `p` | Next/Previous track |
 | `s` | Toggle shuffle |
 | `r` | Cycle repeat (None -> All -> One) |
-| `<-` / `->` | Seek -/+ 5 seconds |
-| `up` / `down` | Select track in playlist |
+| `←` / `→` | Seek -/+ 5 seconds |
+| `↑` / `↓` | Select track in playlist |
 | `enter` | Play selected track |
 | `q` | Quit |
+
+### Search Mode (`/`)
+
+| Key | Action |
+|-----|--------|
+| `type` | Filter tracks by name/artist |
+| `ctrl+n` / `ctrl+p` | Jump to next/previous match |
+| `enter` | Play selected match |
+| `esc` | Cancel search |
+
+### Goto Mode (`g`)
+
+| Key | Action |
+|-----|--------|
+| `←` / `→` | Seek -/+ 5 seconds |
+| `enter` | Confirm seek position |
+| `esc` | Cancel |
+
+### Lyrics Mode (`l`)
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Scroll lyrics |
+| `a` | Toggle auto-scroll |
+| `n` / `p` | Next/Previous track |
+| `←` / `→` | Seek |
+| `l` | Exit lyrics mode |
 
 ## Workflow Examples
 
