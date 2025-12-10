@@ -23,7 +23,10 @@ async fn main() -> anyhow::Result<()> {
             cli::commands::auth::run(provider, &grit_dir).await?;
         }
         Commands::Init { playlist, provider } => {
-            let provider = provider.or(cli.provider).unwrap_or(ProviderKind::Spotify);
+            let provider = provider
+                .or(cli.provider)
+                .or_else(|| cli::commands::init::detect_provider(&playlist))
+                .unwrap_or(ProviderKind::Spotify);
             cli::commands::init::run(provider, &playlist, &grit_dir).await?;
         }
         Commands::Search { query } => {

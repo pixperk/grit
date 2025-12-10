@@ -27,6 +27,17 @@ fn extract_playlist_id(input: &str) -> String {
     input.to_string()
 }
 
+/// Detect provider from playlist URL
+pub fn detect_provider(input: &str) -> Option<ProviderKind> {
+    if input.contains("spotify.com") {
+        Some(ProviderKind::Spotify)
+    } else if input.contains("youtube.com") || input.contains("youtu.be") {
+        Some(ProviderKind::Youtube)
+    } else {
+        None
+    }
+}
+
 pub async fn run(provider: ProviderKind, playlist: &str, grit_dir: &Path) -> Result<()> {
     let playlist_id = extract_playlist_id(playlist);
     //if already initialized, return error

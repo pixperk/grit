@@ -43,7 +43,7 @@ pub enum Commands {
     Init {
         #[arg(help = "Playlist URL or ID\n                       Example: https://open.spotify.com/playlist/37i9...")]
         playlist: String,
-        #[arg(short, long, help = "Provider (defaults to Spotify)")]
+        #[arg(short, long, help = "Provider (auto-detected from URL if not specified, defaults to Spotify)")]
         provider: Option<ProviderKind>,
     },
 
