@@ -82,7 +82,7 @@ async fn play_spotify(
             last_update = now;
             app.position_secs = (app.position_secs + elapsed).min(app.duration_secs);
 
-            let should_poll = poll_counter % 30 == 0
+            let should_poll = poll_counter.is_multiple_of(30)
                 || (app.position_secs >= app.duration_secs && app.duration_secs > 0.0);
 
             if should_poll {
@@ -125,7 +125,7 @@ async fn play_spotify(
             }
         }
 
-        if poll_counter % 50 == 0 {
+        if poll_counter.is_multiple_of(50) {
             let current_modified = std::fs::metadata(snapshot_path)
                 .and_then(|m| m.modified())
                 .ok();
@@ -161,8 +161,12 @@ async fn play_spotify(
                             }
                         }
                     }
-                    (KeyCode::Char('n'), m) if m.contains(KeyModifiers::CONTROL) => app.next_search_match(),
-                    (KeyCode::Char('p'), m) if m.contains(KeyModifiers::CONTROL) => app.prev_search_match(),
+                    (KeyCode::Char('n'), m) if m.contains(KeyModifiers::CONTROL) => {
+                        app.next_search_match()
+                    }
+                    (KeyCode::Char('p'), m) if m.contains(KeyModifiers::CONTROL) => {
+                        app.prev_search_match()
+                    }
                     (KeyCode::Up, _) => app.select_prev(),
                     (KeyCode::Down, _) => app.select_next(),
                     (KeyCode::Backspace, _) => app.pop_search_char(),
@@ -329,7 +333,7 @@ async fn play_spotify(
             if let Some(track) = app.current_track() {
                 let artist = track.artists.first().map(|s| s.as_str()).unwrap_or("");
                 let duration = track.duration_ms / 1000;
-                lyrics_fetcher.fetch_for_track(&track.id, &track.name, artist, duration as u64);
+                lyrics_fetcher.fetch_for_track(&track.id, &track.name, artist, duration);
                 app.lyrics_loading = true;
             }
         }
@@ -405,12 +409,12 @@ async fn play_mpv(
             if let Ok(Some(pos)) = player.get_position().await {
                 app.position_secs = pos.min(app.duration_secs);
             }
-        } else if skip_position > 0 {
-            skip_position -= 1;
+        } else {
+            skip_position = skip_position.saturating_sub(1);
         }
 
         file_check_counter = file_check_counter.wrapping_add(1);
-        if file_check_counter % 100 == 0 {
+        if file_check_counter.is_multiple_of(100) {
             let current_modified = std::fs::metadata(snapshot_path)
                 .and_then(|m| m.modified())
                 .ok();
@@ -459,8 +463,12 @@ async fn play_mpv(
                             }
                         }
                     }
-                    (KeyCode::Char('n'), m) if m.contains(KeyModifiers::CONTROL) => app.next_search_match(),
-                    (KeyCode::Char('p'), m) if m.contains(KeyModifiers::CONTROL) => app.prev_search_match(),
+                    (KeyCode::Char('n'), m) if m.contains(KeyModifiers::CONTROL) => {
+                        app.next_search_match()
+                    }
+                    (KeyCode::Char('p'), m) if m.contains(KeyModifiers::CONTROL) => {
+                        app.prev_search_match()
+                    }
                     (KeyCode::Up, _) => app.select_prev(),
                     (KeyCode::Down, _) => app.select_next(),
                     (KeyCode::Backspace, _) => app.pop_search_char(),
@@ -678,7 +686,7 @@ async fn play_mpv(
         if app.show_lyrics && app.lyrics.is_none() && !app.lyrics_loading {
             if let Some(track) = app.current_track() {
                 let duration = track.duration_ms / 1000;
-                lyrics_fetcher.fetch_for_yt(&track.id, &track.name, duration as u64);
+                lyrics_fetcher.fetch_for_yt(&track.id, &track.name, duration);
                 app.lyrics_loading = true;
             }
         }

@@ -34,7 +34,10 @@ pub struct App {
 
 impl App {
     pub fn new(playlist_name: String, tracks: Vec<Track>, backend: PlayerBackend) -> Self {
-        let duration = tracks.first().map(|t| t.duration_ms as f64 / 1000.0).unwrap_or(0.0);
+        let duration = tracks
+            .first()
+            .map(|t| t.duration_ms as f64 / 1000.0)
+            .unwrap_or(0.0);
         Self {
             playlist_name,
             tracks,
@@ -82,13 +85,16 @@ impl App {
     }
 
     pub fn lyrics_line_count(&self) -> usize {
-        self.lyrics.as_ref().map(|l| {
-            if l.lines.is_empty() {
-                l.plain.as_ref().map(|p| p.lines().count()).unwrap_or(0)
-            } else {
-                l.lines.len()
-            }
-        }).unwrap_or(0)
+        self.lyrics
+            .as_ref()
+            .map(|l| {
+                if l.lines.is_empty() {
+                    l.plain.as_ref().map(|p| p.lines().count()).unwrap_or(0)
+                } else {
+                    l.lines.len()
+                }
+            })
+            .unwrap_or(0)
     }
 
     pub fn reset_lyrics_scroll(&mut self) {
@@ -231,7 +237,10 @@ impl App {
                 let query_lower = query.to_lowercase();
                 for (i, track) in self.tracks.iter().enumerate() {
                     if track.name.to_lowercase().contains(&query_lower)
-                        || track.artists.iter().any(|a| a.to_lowercase().contains(&query_lower))
+                        || track
+                            .artists
+                            .iter()
+                            .any(|a| a.to_lowercase().contains(&query_lower))
                     {
                         self.search_matches.push(i);
                     }

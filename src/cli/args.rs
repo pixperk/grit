@@ -9,8 +9,7 @@ use clap::{Parser, Subcommand};
 #[command(name = "grit")]
 #[command(version)]
 #[command(about = "Git-like version control for playlists")]
-#[command(
-    long_about = "grit - Version control for your music\n\n\
+#[command(long_about = "grit - Version control for your music\n\n\
                   Track playlist changes, sync across Spotify and YouTube,\n\
                   and play music with a beautiful TUI.\n\n\
                   EXAMPLES:\n  \
@@ -20,16 +19,26 @@ use clap::{Parser, Subcommand};
                     grit add <track-id>\n  \
                     grit commit -m \"add chill vibes\"\n  \
                     grit push\n  \
-                    grit play -l <playlist-id>"
-)]
+                    grit play -l <playlist-id>")]
 pub struct Cli {
-    #[arg(short, long, global = true, help = "Override provider (spotify/youtube)")]
+    #[arg(
+        short,
+        long,
+        global = true,
+        help = "Override provider (spotify/youtube)"
+    )]
     pub provider: Option<ProviderKind>,
 
     #[arg(short = 'l', long, global = true, help = "Playlist ID to operate on")]
     pub playlist: Option<String>,
 
-    #[arg(short, long, global = true, default_value_t = false, help = "Enable verbose output")]
+    #[arg(
+        short,
+        long,
+        global = true,
+        default_value_t = false,
+        help = "Enable verbose output"
+    )]
     pub verbose: bool,
 
     #[command(subcommand)]
@@ -41,9 +50,15 @@ pub enum Commands {
     /// Initialize tracking for a playlist (like 'git init')
     #[command(visible_alias = "i")]
     Init {
-        #[arg(help = "Playlist URL or ID\n                       Example: https://open.spotify.com/playlist/37i9...")]
+        #[arg(
+            help = "Playlist URL or ID\n                       Example: https://open.spotify.com/playlist/37i9..."
+        )]
         playlist: String,
-        #[arg(short, long, help = "Provider (auto-detected from URL if not specified, defaults to Spotify)")]
+        #[arg(
+            short,
+            long,
+            help = "Provider (auto-detected from URL if not specified, defaults to Spotify)"
+        )]
         provider: Option<ProviderKind>,
     },
 

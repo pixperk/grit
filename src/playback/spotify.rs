@@ -243,10 +243,7 @@ impl SpotifyPlayer {
     /// Start playback with a list of track URIs
     pub async fn play(&self, uris: Vec<String>, offset: usize) -> Result<()> {
         let token = self.get_token().await?;
-        let device_id = self
-            .device_id
-            .as_ref()
-            .context("No device selected")?;
+        let device_id = self.device_id.as_ref().context("No device selected")?;
 
         let body = PlayRequest {
             uris: Some(uris),
@@ -255,7 +252,10 @@ impl SpotifyPlayer {
 
         let resp = self
             .http
-            .put(format!("{}/me/player/play?device_id={}", API_BASE, device_id))
+            .put(format!(
+                "{}/me/player/play?device_id={}",
+                API_BASE, device_id
+            ))
             .bearer_auth(&token)
             .json(&body)
             .send()
@@ -274,8 +274,12 @@ impl SpotifyPlayer {
         let token = self.get_token().await?;
         let device_id = self.device_id.as_ref().context("No device selected")?;
 
-        let resp = self.http
-            .put(format!("{}/me/player/pause?device_id={}", API_BASE, device_id))
+        let resp = self
+            .http
+            .put(format!(
+                "{}/me/player/pause?device_id={}",
+                API_BASE, device_id
+            ))
             .bearer_auth(&token)
             .header("Content-Length", "0")
             .send()
@@ -294,8 +298,12 @@ impl SpotifyPlayer {
         let token = self.get_token().await?;
         let device_id = self.device_id.as_ref().context("No device selected")?;
 
-        let resp = self.http
-            .put(format!("{}/me/player/play?device_id={}", API_BASE, device_id))
+        let resp = self
+            .http
+            .put(format!(
+                "{}/me/player/play?device_id={}",
+                API_BASE, device_id
+            ))
             .bearer_auth(&token)
             .header("Content-Length", "0")
             .send()
@@ -313,8 +321,12 @@ impl SpotifyPlayer {
         let token = self.get_token().await?;
         let device_id = self.device_id.as_ref().context("No device selected")?;
 
-        let resp = self.http
-            .post(format!("{}/me/player/next?device_id={}", API_BASE, device_id))
+        let resp = self
+            .http
+            .post(format!(
+                "{}/me/player/next?device_id={}",
+                API_BASE, device_id
+            ))
             .bearer_auth(&token)
             .header("Content-Length", "0")
             .send()
@@ -332,8 +344,12 @@ impl SpotifyPlayer {
         let token = self.get_token().await?;
         let device_id = self.device_id.as_ref().context("No device selected")?;
 
-        let resp = self.http
-            .post(format!("{}/me/player/previous?device_id={}", API_BASE, device_id))
+        let resp = self
+            .http
+            .post(format!(
+                "{}/me/player/previous?device_id={}",
+                API_BASE, device_id
+            ))
             .bearer_auth(&token)
             .header("Content-Length", "0")
             .send()
@@ -375,7 +391,8 @@ impl SpotifyPlayer {
         let token = self.get_token().await?;
         let device_id = self.device_id.as_ref().context("No device selected")?;
 
-        let resp = self.http
+        let resp = self
+            .http
             .put(format!(
                 "{}/me/player/shuffle?device_id={}&state={}",
                 API_BASE, device_id, state
@@ -403,7 +420,8 @@ impl SpotifyPlayer {
             crate::playback::events::RepeatMode::One => "track",
         };
 
-        let resp = self.http
+        let resp = self
+            .http
             .put(format!(
                 "{}/me/player/repeat?device_id={}&state={}",
                 API_BASE, device_id, state
@@ -443,7 +461,12 @@ impl SpotifyPlayer {
         let playing: CurrentlyPlaying = resp.json().await?;
 
         if let Some(item) = playing.item {
-            let artists = item.artists.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", ");
+            let artists = item
+                .artists
+                .iter()
+                .map(|a| a.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
             Ok(Some((item.name, artists)))
         } else {
             Ok(None)

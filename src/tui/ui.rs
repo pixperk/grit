@@ -1,4 +1,3 @@
-use std::io::{self, Stdout};
 use anyhow::Result;
 use crossterm::{
     event::{self, Event, KeyEvent, KeyEventKind},
@@ -13,6 +12,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame, Terminal,
 };
+use std::io::{self, Stdout};
 
 use super::App;
 
@@ -75,19 +75,13 @@ impl Drop for Tui {
 fn render(frame: &mut Frame, app: &App) {
     let area = frame.area();
 
-    frame.render_widget(
-        Block::default().style(Style::default().bg(SAKURA_BG)),
-        area,
-    );
+    frame.render_widget(Block::default().style(Style::default().bg(SAKURA_BG)), area);
 
     // Split horizontally: player (left) and playlist (right)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .margin(1)
-        .constraints([
-            Constraint::Percentage(60),
-            Constraint::Percentage(40),
-        ])
+        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
         .split(area);
 
     // Left side: player controls
@@ -134,12 +128,20 @@ fn draw_header(frame: &mut Frame, app: &App, area: Rect) {
     let status_color = if app.loading { SAKURA_SOFT } else { SEA_GREEN };
 
     let header = Line::from(vec![
-        Span::styled("grit ", Style::default().fg(SAKURA_PINK).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "grit ",
+            Style::default()
+                .fg(SAKURA_PINK)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(status, Style::default().fg(status_color)),
         Span::styled(" ", Style::default()),
         Span::styled(&app.playlist_name, Style::default().fg(SAKURA_FG)),
         Span::styled(" ", Style::default()),
-        Span::styled(format!("[{}]", backend_str), Style::default().fg(SAKURA_DIM)),
+        Span::styled(
+            format!("[{}]", backend_str),
+            Style::default().fg(SAKURA_DIM),
+        ),
     ]);
 
     let block = Block::default()
@@ -153,16 +155,30 @@ fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
     let content = if app.loading {
         vec![
             Line::from(""),
-            Line::from(Span::styled("loading...", Style::default().fg(SEA_GREEN).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "loading...",
+                Style::default().fg(SEA_GREEN).add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
-            Line::from(Span::styled("fetching track", Style::default().fg(SEA_GREEN_DIM))),
+            Line::from(Span::styled(
+                "fetching track",
+                Style::default().fg(SEA_GREEN_DIM),
+            )),
         ]
     } else if let Some(error) = &app.error {
         vec![
             Line::from(""),
-            Line::from(Span::styled("uh oh!", Style::default().fg(Color::Rgb(255, 100, 100)).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "uh oh!",
+                Style::default()
+                    .fg(Color::Rgb(255, 100, 100))
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
-            Line::from(Span::styled(error.as_str(), Style::default().fg(SAKURA_DIM))),
+            Line::from(Span::styled(
+                error.as_str(),
+                Style::default().fg(SAKURA_DIM),
+            )),
         ]
     } else {
         let (title, artists) = app
@@ -171,9 +187,15 @@ fn draw_now_playing(frame: &mut Frame, app: &App, area: Rect) {
             .unwrap_or(("Nothing playing".into(), String::new()));
 
         vec![
-            Line::from(Span::styled("now playing", Style::default().fg(SEA_GREEN_DIM))),
+            Line::from(Span::styled(
+                "now playing",
+                Style::default().fg(SEA_GREEN_DIM),
+            )),
             Line::from(""),
-            Line::from(Span::styled(title, Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                title,
+                Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD),
+            )),
             Line::from(Span::styled(artists, Style::default().fg(SEA_GREEN_BRIGHT))),
         ]
     };
@@ -186,15 +208,25 @@ fn draw_progress(frame: &mut Frame, app: &App, area: Rect) {
         let seek_pos = app.get_seek_position().unwrap_or(0.0);
         let pos = App::format_time(seek_pos);
         let dur = App::format_time(app.duration_secs);
-        let label = format!("seek: {} / {} (<-/-> to move, enter to confirm, esc to cancel)", pos, dur);
+        let label = format!(
+            "seek: {} / {} (<-/-> to move, enter to confirm, esc to cancel)",
+            pos, dur
+        );
         let gauge = Gauge::default()
             .gauge_style(Style::default().fg(SAKURA_PINK).bg(Color::Rgb(50, 50, 55)))
             .ratio(app.seek_progress())
-            .label(Span::styled(label, Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD)));
+            .label(Span::styled(
+                label,
+                Style::default().fg(SAKURA_FG).add_modifier(Modifier::BOLD),
+            ));
         frame.render_widget(gauge, area);
     } else if app.error.is_some() {
         let gauge = Gauge::default()
-            .gauge_style(Style::default().fg(Color::Rgb(80, 80, 85)).bg(Color::Rgb(50, 50, 55)))
+            .gauge_style(
+                Style::default()
+                    .fg(Color::Rgb(80, 80, 85))
+                    .bg(Color::Rgb(50, 50, 55)),
+            )
             .ratio(0.0)
             .label(Span::styled("— / —", Style::default().fg(SAKURA_DIM)));
         frame.render_widget(gauge, area);
@@ -227,7 +259,10 @@ fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
                 Span::styled(repeat_text, Style::default().fg(SEA_GREEN)),
             ]),
             Line::from(""),
-            Line::from(Span::styled("next track is random", Style::default().fg(SEA_GREEN_DIM))),
+            Line::from(Span::styled(
+                "next track is random",
+                Style::default().fg(SEA_GREEN_DIM),
+            )),
         ]
     } else if app.repeat_mode == RepeatMode::One {
         let (title, artists) = app
@@ -238,7 +273,10 @@ fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
         vec![
             Line::from(Span::styled("repeat one", Style::default().fg(SEA_GREEN))),
             Line::from(""),
-            Line::from(Span::styled(format!("{} - {}", title, artists), Style::default().fg(SEA_GREEN_DIM))),
+            Line::from(Span::styled(
+                format!("{} - {}", title, artists),
+                Style::default().fg(SEA_GREEN_DIM),
+            )),
         ]
     } else {
         let (title, artists) = app
@@ -255,7 +293,10 @@ fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
         vec![
             Line::from(Span::styled(header, Style::default().fg(SAKURA_DIM))),
             Line::from(""),
-            Line::from(Span::styled(format!("{} - {}", title, artists), Style::default().fg(SAKURA_DIM))),
+            Line::from(Span::styled(
+                format!("{} - {}", title, artists),
+                Style::default().fg(SAKURA_DIM),
+            )),
         ]
     };
 
@@ -292,9 +333,13 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
             let style = if is_selected {
                 Style::default().fg(SAKURA_BG).bg(SAKURA_PINK)
             } else if is_match {
-                Style::default().fg(Color::Rgb(255, 220, 100)).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Rgb(255, 220, 100))
+                    .add_modifier(Modifier::BOLD)
             } else if is_current {
-                Style::default().fg(SEA_GREEN_BRIGHT).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(SEA_GREEN_BRIGHT)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(SAKURA_FG)
             };
@@ -307,7 +352,11 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
         let match_info = if app.search_matches.is_empty() {
             "no matches".to_string()
         } else {
-            format!("{}/{}", app.search_match_index + 1, app.search_matches.len())
+            format!(
+                "{}/{}",
+                app.search_match_index + 1,
+                app.search_matches.len()
+            )
         };
         format!(" /{}  [{}] ", query, match_info)
     } else {
@@ -347,13 +396,15 @@ fn draw_lyrics(frame: &mut Frame, app: &App, area: Rect) {
     } else if let Some(ref lyrics) = app.lyrics {
         if lyrics.lines.is_empty() {
             if let Some(ref plain) = lyrics.plain {
-                let scroll = app.lyrics_scroll.min(plain.lines().count().saturating_sub(1));
-                plain.lines()
+                let scroll = app
+                    .lyrics_scroll
+                    .min(plain.lines().count().saturating_sub(1));
+                plain
+                    .lines()
                     .skip(scroll)
                     .take(visible_height)
                     .map(|line| {
-                        ListItem::new(line.to_string())
-                            .style(Style::default().fg(SAKURA_FG))
+                        ListItem::new(line.to_string()).style(Style::default().fg(SAKURA_FG))
                     })
                     .collect()
             } else {
@@ -368,13 +419,18 @@ fn draw_lyrics(frame: &mut Frame, app: &App, area: Rect) {
                 app.lyrics_scroll.min(lyrics.lines.len().saturating_sub(1))
             };
 
-            lyrics.lines.iter().enumerate()
+            lyrics
+                .lines
+                .iter()
+                .enumerate()
                 .skip(scroll)
                 .take(visible_height)
                 .map(|(i, line)| {
                     let is_current = current_idx == Some(i);
                     let style = if is_current {
-                        Style::default().fg(SEA_GREEN_BRIGHT).add_modifier(Modifier::BOLD)
+                        Style::default()
+                            .fg(SEA_GREEN_BRIGHT)
+                            .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default().fg(SAKURA_DIM)
                     };
@@ -401,42 +457,67 @@ fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
 
     let controls = if app.is_searching() {
         Line::from(vec![
-            Span::styled("[type]", k), Span::styled(" filter  ", d),
-            Span::styled("[ctrl+n/p]", k), Span::styled(" next/prev  ", d),
-            Span::styled("[enter]", k), Span::styled(" play  ", d),
-            Span::styled("[esc]", k), Span::styled(" cancel", d),
+            Span::styled("[type]", k),
+            Span::styled(" filter  ", d),
+            Span::styled("[ctrl+n/p]", k),
+            Span::styled(" next/prev  ", d),
+            Span::styled("[enter]", k),
+            Span::styled(" play  ", d),
+            Span::styled("[esc]", k),
+            Span::styled(" cancel", d),
         ])
     } else if app.is_seeking() {
         Line::from(vec![
-            Span::styled("[←→]", k), Span::styled(" ±5s  ", d),
-            Span::styled("[enter]", k), Span::styled(" confirm  ", d),
-            Span::styled("[esc]", k), Span::styled(" cancel", d),
+            Span::styled("[←→]", k),
+            Span::styled(" ±5s  ", d),
+            Span::styled("[enter]", k),
+            Span::styled(" confirm  ", d),
+            Span::styled("[esc]", k),
+            Span::styled(" cancel", d),
         ])
     } else if app.search_blocked {
         Line::from(vec![
-            Span::styled("exit lyrics first ", Style::default().fg(Color::Rgb(255, 150, 150))),
+            Span::styled(
+                "exit lyrics first ",
+                Style::default().fg(Color::Rgb(255, 150, 150)),
+            ),
             Span::styled("[l]", k),
         ])
     } else if app.show_lyrics {
         Line::from(vec![
-            Span::styled("[↑↓]", k), Span::styled(" scroll  ", d),
-            Span::styled("[a]", k), Span::styled(" auto  ", d),
-            Span::styled("[n/p]", k), Span::styled(" skip  ", d),
-            Span::styled("[←→]", k), Span::styled(" seek  ", d),
-            Span::styled("[l]", k), Span::styled(" back  ", d),
-            Span::styled("[q]", k), Span::styled(" quit", d),
+            Span::styled("[↑↓]", k),
+            Span::styled(" scroll  ", d),
+            Span::styled("[a]", k),
+            Span::styled(" auto  ", d),
+            Span::styled("[n/p]", k),
+            Span::styled(" skip  ", d),
+            Span::styled("[←→]", k),
+            Span::styled(" seek  ", d),
+            Span::styled("[l]", k),
+            Span::styled(" back  ", d),
+            Span::styled("[q]", k),
+            Span::styled(" quit", d),
         ])
     } else {
         Line::from(vec![
-            Span::styled("[space]", k), Span::styled(" pause  ", d),
-            Span::styled("[n/p]", k), Span::styled(" skip  ", d),
-            Span::styled("[←→]", k), Span::styled(" seek  ", d),
-            Span::styled("[g]", k), Span::styled(" goto  ", d),
-            Span::styled("[/]", k), Span::styled(" search  ", d),
-            Span::styled("[l]", k), Span::styled(" lyrics  ", d),
-            Span::styled("[s]", k), Span::styled(" shuffle  ", d),
-            Span::styled("[r]", k), Span::styled(" repeat  ", d),
-            Span::styled("[q]", k), Span::styled(" quit", d),
+            Span::styled("[space]", k),
+            Span::styled(" pause  ", d),
+            Span::styled("[n/p]", k),
+            Span::styled(" skip  ", d),
+            Span::styled("[←→]", k),
+            Span::styled(" seek  ", d),
+            Span::styled("[g]", k),
+            Span::styled(" goto  ", d),
+            Span::styled("[/]", k),
+            Span::styled(" search  ", d),
+            Span::styled("[l]", k),
+            Span::styled(" lyrics  ", d),
+            Span::styled("[s]", k),
+            Span::styled(" shuffle  ", d),
+            Span::styled("[r]", k),
+            Span::styled(" repeat  ", d),
+            Span::styled("[q]", k),
+            Span::styled(" quit", d),
         ])
     };
 

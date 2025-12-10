@@ -78,7 +78,11 @@ fn parse_timestamp(ts: &str) -> Option<f64> {
     Some(minutes * 60.0 + seconds)
 }
 
-pub async fn fetch_lyrics(track_name: &str, artist_name: &str, duration_secs: u64) -> Result<Lyrics> {
+pub async fn fetch_lyrics(
+    track_name: &str,
+    artist_name: &str,
+    duration_secs: u64,
+) -> Result<Lyrics> {
     let client = Client::new();
 
     let url = format!(
@@ -100,7 +104,8 @@ pub async fn fetch_lyrics(track_name: &str, artist_name: &str, duration_secs: u6
 
     let data: LrcLibResponse = response.json().await?;
 
-    let lines = data.synced_lyrics
+    let lines = data
+        .synced_lyrics
         .as_ref()
         .map(|s| parse_lrc(s))
         .unwrap_or_default();
@@ -113,17 +118,46 @@ pub async fn fetch_lyrics(track_name: &str, artist_name: &str, duration_secs: u6
 
 pub fn clean_yt_title(title: &str) -> (String, Option<String>) {
     let patterns = [
-        "(official video)", "(official music video)", "(official audio)",
-        "(lyric video)", "(lyrics video)", "(lyrics)", "(audio)",
-        "(visualizer)", "(official visualizer)", "(music video)",
-        "[official video]", "[official music video]", "[official audio]",
-        "[lyric video]", "[lyrics video]", "[lyrics]", "[audio]",
-        "[visualizer]", "[official visualizer]", "[music video]",
-        "official video", "official music video", "official audio",
-        "lyric video", "lyrics video", "music video",
-        "(hd)", "(hq)", "[hd]", "[hq]", "(4k)", "[4k]",
-        "(remastered)", "[remastered]", "(remaster)", "[remaster]",
-        "(live)", "[live]", "(acoustic)", "[acoustic]",
+        "(official video)",
+        "(official music video)",
+        "(official audio)",
+        "(lyric video)",
+        "(lyrics video)",
+        "(lyrics)",
+        "(audio)",
+        "(visualizer)",
+        "(official visualizer)",
+        "(music video)",
+        "[official video]",
+        "[official music video]",
+        "[official audio]",
+        "[lyric video]",
+        "[lyrics video]",
+        "[lyrics]",
+        "[audio]",
+        "[visualizer]",
+        "[official visualizer]",
+        "[music video]",
+        "official video",
+        "official music video",
+        "official audio",
+        "lyric video",
+        "lyrics video",
+        "music video",
+        "(hd)",
+        "(hq)",
+        "[hd]",
+        "[hq]",
+        "(4k)",
+        "[4k]",
+        "(remastered)",
+        "[remastered]",
+        "(remaster)",
+        "[remaster]",
+        "(live)",
+        "[live]",
+        "(acoustic)",
+        "[acoustic]",
     ];
 
     let mut cleaned = title.to_lowercase();
@@ -133,7 +167,13 @@ pub fn clean_yt_title(title: &str) -> (String, Option<String>) {
 
     cleaned = cleaned
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' { c } else { ' ' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == ' ' || c == '-' {
+                c
+            } else {
+                ' '
+            }
+        })
         .collect();
 
     while cleaned.contains("  ") {
@@ -177,7 +217,13 @@ impl LyricsFetcher {
         self.rx.try_recv().ok()
     }
 
-    pub fn fetch_for_track(&mut self, track_id: &str, track_name: &str, artist: &str, duration_secs: u64) {
+    pub fn fetch_for_track(
+        &mut self,
+        track_id: &str,
+        track_name: &str,
+        artist: &str,
+        duration_secs: u64,
+    ) {
         if self.current_track_id.as_deref() == Some(track_id) {
             return;
         }

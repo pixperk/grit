@@ -374,7 +374,10 @@ pub async fn apply(file_path: &str, playlist: Option<&str>, grit_dir: &Path) -> 
 
     let snapshot_path = snapshot::snapshot_path(grit_dir, playlist_id);
     if !snapshot_path.exists() {
-        bail!("Playlist {} not initialized. Run 'grit init' first.", playlist_id);
+        bail!(
+            "Playlist {} not initialized. Run 'grit init' first.",
+            playlist_id
+        );
     }
 
     // Load current snapshot to check provider compatibility

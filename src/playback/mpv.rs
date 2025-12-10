@@ -81,7 +81,8 @@ mod unix {
 
         let fetch = TokioCommand::new("yt-dlp")
             .args([
-                "-f", "bestaudio",
+                "-f",
+                "bestaudio",
                 "-g",
                 "--no-warnings",
                 "--no-playlist",
@@ -96,12 +97,13 @@ mod unix {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("yt-dlp failed: {}", stderr.lines().next().unwrap_or("unknown error"));
+            anyhow::bail!(
+                "yt-dlp failed: {}",
+                stderr.lines().next().unwrap_or("unknown error")
+            );
         }
 
-        let url = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
         if url.is_empty() {
             anyhow::bail!("yt-dlp returned empty URL");
@@ -154,7 +156,11 @@ mod unix {
 
             let (event_tx, event_rx) = mpsc::channel(32);
             let (result_tx, result_rx) = mpsc::channel(32);
-            tokio::spawn(Self::read_events(BufReader::new(reader), event_tx, result_tx));
+            tokio::spawn(Self::read_events(
+                BufReader::new(reader),
+                event_tx,
+                result_tx,
+            ));
 
             Ok(Self {
                 socket_path,
@@ -203,31 +209,42 @@ mod unix {
         }
 
         pub async fn load(&mut self, url: &str) -> Result<()> {
-            self.send_command(vec![json!("loadfile"), json!(url), json!("replace")]).await?;
-            self.send_command(vec![json!("set_property"), json!("pause"), json!(false)]).await?;
+            self.send_command(vec![json!("loadfile"), json!(url), json!("replace")])
+                .await?;
+            self.send_command(vec![json!("set_property"), json!("pause"), json!(false)])
+                .await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             while self.result_rx.try_recv().is_ok() {}
             Ok(())
         }
 
         pub async fn pause(&mut self) -> Result<()> {
-            self.send_command(vec![json!("set_property"), json!("pause"), json!(true)]).await
+            self.send_command(vec![json!("set_property"), json!("pause"), json!(true)])
+                .await
         }
 
         pub async fn resume(&mut self) -> Result<()> {
-            self.send_command(vec![json!("set_property"), json!("pause"), json!(false)]).await
+            self.send_command(vec![json!("set_property"), json!("pause"), json!(false)])
+                .await
         }
 
         pub async fn seek(&mut self, seconds: i64) -> Result<()> {
-            self.send_command(vec![json!("seek"), json!(seconds), json!("relative")]).await
+            self.send_command(vec![json!("seek"), json!(seconds), json!("relative")])
+                .await
         }
 
         pub async fn seek_absolute(&mut self, seconds: f64) -> Result<()> {
-            self.send_command(vec![json!("seek"), json!(seconds), json!("absolute")]).await
+            self.send_command(vec![json!("seek"), json!(seconds), json!("absolute")])
+                .await
         }
 
         pub async fn observe_eof_reached(&mut self) -> Result<()> {
-            self.send_command(vec![json!("observe_property"), json!(4), json!("eof-reached")]).await
+            self.send_command(vec![
+                json!("observe_property"),
+                json!(4),
+                json!("eof-reached"),
+            ])
+            .await
         }
 
         pub fn try_recv_event(&mut self) -> Option<MpvEvent> {
@@ -235,7 +252,8 @@ mod unix {
         }
 
         pub async fn get_position(&mut self) -> Result<Option<f64>> {
-            self.send_command(vec![json!("get_property"), json!("time-pos")]).await?;
+            self.send_command(vec![json!("get_property"), json!("time-pos")])
+                .await?;
             tokio::select! {
                 result = self.result_rx.recv() => {
                     if let Some(Some(data)) = result {
