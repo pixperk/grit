@@ -228,12 +228,33 @@ impl SpotifyPlayer {
             );
         }
 
-        // Prefer active device, otherwise first one
-        let device = devices
-            .iter()
-            .find(|(_, _, active)| *active)
-            .or(devices.first())
-            .unwrap();
+        let device = if devices.len() == 1 {
+            &devices[0]
+        } else {
+            // Multiple devices - let user choose
+            println!("Available Spotify devices:");
+            for (i, (_, name, active)) in devices.iter().enumerate() {
+                let marker = if *active { " (active)" } else { "" };
+                println!("  [{}] {}{}", i + 1, name, marker);
+            }
+
+            print!("Select device [1-{}]: ", devices.len());
+            std::io::Write::flush(&mut std::io::stdout())?;
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+
+            let choice: usize = input
+                .trim()
+                .parse()
+                .context("Invalid selection")?;
+
+            if choice == 0 || choice > devices.len() {
+                bail!("Invalid device selection");
+            }
+
+            &devices[choice - 1]
+        };
 
         println!("Using Spotify device: {}", device.1);
         self.device_id = Some(device.0.clone());
