@@ -19,7 +19,10 @@ pub struct App {
     pub backend: PlayerBackend,
     pub error: Option<String>,
     pub loading: bool,
-    pub seek_position: Option<f64>, // For goto mode (g key) - target position in seconds
+    pub seek_position: Option<f64>,
+    pub search_query: Option<String>,
+    pub search_matches: Vec<usize>,
+    pub search_match_index: usize,
 }
 
 impl App {
@@ -39,6 +42,9 @@ impl App {
             error: None,
             loading: false,
             seek_position: None,
+            search_query: None,
+            search_matches: Vec::new(),
+            search_match_index: 0,
         }
     }
 
@@ -138,5 +144,77 @@ impl App {
             }
         }
         self.progress()
+    }
+
+    pub fn start_search(&mut self) {
+        self.search_query = Some(String::new());
+        self.search_matches.clear();
+        self.search_match_index = 0;
+    }
+
+    pub fn cancel_search(&mut self) {
+        self.search_query = None;
+        self.search_matches.clear();
+        self.search_match_index = 0;
+    }
+
+    pub fn push_search_char(&mut self, c: char) {
+        if let Some(ref mut query) = self.search_query {
+            query.push(c);
+            self.update_search_matches();
+        }
+    }
+
+    pub fn pop_search_char(&mut self) {
+        if let Some(ref mut query) = self.search_query {
+            query.pop();
+            self.update_search_matches();
+        }
+    }
+
+    fn update_search_matches(&mut self) {
+        self.search_matches.clear();
+        if let Some(ref query) = self.search_query {
+            if !query.is_empty() {
+                let query_lower = query.to_lowercase();
+                for (i, track) in self.tracks.iter().enumerate() {
+                    if track.name.to_lowercase().contains(&query_lower)
+                        || track.artists.iter().any(|a| a.to_lowercase().contains(&query_lower))
+                    {
+                        self.search_matches.push(i);
+                    }
+                }
+                if !self.search_matches.is_empty() {
+                    self.search_match_index = 0;
+                    self.selected_index = self.search_matches[0];
+                }
+            }
+        }
+    }
+
+    pub fn next_search_match(&mut self) {
+        if !self.search_matches.is_empty() {
+            self.search_match_index = (self.search_match_index + 1) % self.search_matches.len();
+            self.selected_index = self.search_matches[self.search_match_index];
+        }
+    }
+
+    pub fn prev_search_match(&mut self) {
+        if !self.search_matches.is_empty() {
+            self.search_match_index = if self.search_match_index == 0 {
+                self.search_matches.len() - 1
+            } else {
+                self.search_match_index - 1
+            };
+            self.selected_index = self.search_matches[self.search_match_index];
+        }
+    }
+
+    pub fn is_searching(&self) -> bool {
+        self.search_query.is_some()
+    }
+
+    pub fn is_search_match(&self, index: usize) -> bool {
+        self.search_matches.contains(&index)
     }
 }

@@ -260,9 +260,8 @@ fn draw_next_up(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
-    let visible_height = area.height.saturating_sub(2) as usize; // Account for border
+    let visible_height = area.height.saturating_sub(2) as usize;
 
-    // Calculate scroll offset to keep selected item visible
     let scroll_offset = if app.selected_index >= visible_height {
         app.selected_index - visible_height + 1
     } else {
@@ -278,6 +277,7 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
         .map(|(i, track)| {
             let is_current = i == app.current_index;
             let is_selected = i == app.selected_index;
+            let is_match = app.is_search_match(i);
 
             let prefix = if is_current { "▶ " } else { "  " };
             let name = if track.name.len() > 25 {
@@ -288,6 +288,8 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
 
             let style = if is_selected {
                 Style::default().fg(SAKURA_BG).bg(SAKURA_PINK)
+            } else if is_match {
+                Style::default().fg(Color::Rgb(255, 220, 100)).add_modifier(Modifier::BOLD)
             } else if is_current {
                 Style::default().fg(SEA_GREEN_BRIGHT).add_modifier(Modifier::BOLD)
             } else {
@@ -298,8 +300,19 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
         })
         .collect();
 
+    let title = if let Some(ref query) = app.search_query {
+        let match_info = if app.search_matches.is_empty() {
+            "no matches".to_string()
+        } else {
+            format!("{}/{}", app.search_match_index + 1, app.search_matches.len())
+        };
+        format!(" /{}  [{}] ", query, match_info)
+    } else {
+        " playlist ".to_string()
+    };
+
     let block = Block::default()
-        .title(Span::styled(" playlist ", Style::default().fg(SAKURA_PINK)))
+        .title(Span::styled(title, Style::default().fg(SAKURA_PINK)))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(SAKURA_DIM));
 
@@ -308,7 +321,18 @@ fn draw_playlist(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
-    let controls = if app.is_seeking() {
+    let controls = if app.is_searching() {
+        Line::from(vec![
+            Span::styled("[type]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" search ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[n/N]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" next/prev ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[enter]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" play ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[esc]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" cancel", Style::default().fg(SAKURA_DIM)),
+        ])
+    } else if app.is_seeking() {
         Line::from(vec![
             Span::styled("[←→]", Style::default().fg(SAKURA_PINK)),
             Span::styled(" ±5s ", Style::default().fg(SAKURA_DIM)),
@@ -327,12 +351,12 @@ fn draw_controls(frame: &mut Frame, app: &App, area: Rect) {
             Span::styled(" ±5s ", Style::default().fg(SAKURA_DIM)),
             Span::styled("[g]", Style::default().fg(SAKURA_PINK)),
             Span::styled(" seek ", Style::default().fg(SAKURA_DIM)),
+            Span::styled("[/]", Style::default().fg(SAKURA_PINK)),
+            Span::styled(" search ", Style::default().fg(SAKURA_DIM)),
             Span::styled("[s]", Style::default().fg(SAKURA_PINK)),
             Span::styled(" shuffle ", Style::default().fg(SAKURA_DIM)),
             Span::styled("[r]", Style::default().fg(SAKURA_PINK)),
             Span::styled(" repeat ", Style::default().fg(SAKURA_DIM)),
-            Span::styled("[↑↓]", Style::default().fg(SAKURA_PINK)),
-            Span::styled(" select ", Style::default().fg(SAKURA_DIM)),
             Span::styled("[q]", Style::default().fg(SAKURA_PINK)),
             Span::styled(" quit", Style::default().fg(SAKURA_DIM)),
         ])

@@ -129,6 +129,36 @@ async fn play_spotify(
         }
 
         if let Some(key) = tui.poll_key()? {
+            if app.is_searching() {
+                match key {
+                    KeyCode::Esc => app.cancel_search(),
+                    KeyCode::Enter => {
+                        let idx = app.selected_index;
+                        app.cancel_search();
+                        if idx != app.current_index && idx < app.tracks.len() {
+                            let uris: Vec<String> = app
+                                .tracks
+                                .iter()
+                                .map(|t| format!("spotify:track:{}", t.id))
+                                .collect();
+                            if let Err(e) = player.play(uris, idx).await {
+                                app.set_error(e.to_string());
+                            } else {
+                                app.current_index = idx;
+                                app.position_secs = 0.0;
+                                app.duration_secs = app.tracks[idx].duration_ms as f64 / 1000.0;
+                            }
+                        }
+                    }
+                    KeyCode::Char('n') => app.next_search_match(),
+                    KeyCode::Char('N') => app.prev_search_match(),
+                    KeyCode::Backspace => app.pop_search_char(),
+                    KeyCode::Char(c) => app.push_search_char(c),
+                    _ => {}
+                }
+                continue;
+            }
+
             if app.is_seeking() {
                 match key {
                     KeyCode::Esc => app.cancel_seeking(),
@@ -152,9 +182,8 @@ async fn play_spotify(
             app.clear_error();
             match key {
                 KeyCode::Char('q') => break,
-                KeyCode::Char('g') => {
-                    app.start_seeking();
-                }
+                KeyCode::Char('/') => app.start_search(),
+                KeyCode::Char('g') => app.start_seeking(),
                 KeyCode::Char(' ') => {
                     app.is_paused = !app.is_paused;
                     let res = if app.is_paused {
@@ -224,12 +253,8 @@ async fn play_spotify(
                         }
                     }
                 }
-                KeyCode::Up => {
-                    app.select_prev();
-                }
-                KeyCode::Down => {
-                    app.select_next();
-                }
+                KeyCode::Up => app.select_prev(),
+                KeyCode::Down => app.select_next(),
                 KeyCode::Enter => {
                     let idx = app.selected_index;
                     if idx != app.current_index && idx < app.tracks.len() {
@@ -334,6 +359,46 @@ async fn play_mpv(
         }
 
         if let Some(key) = tui.poll_key()? {
+            if app.is_searching() {
+                match key {
+                    KeyCode::Esc => app.cancel_search(),
+                    KeyCode::Enter => {
+                        let idx = app.selected_index;
+                        app.cancel_search();
+                        if idx != app.current_index && idx < app.tracks.len() {
+                            if let Some(track) = app.tracks.get(idx).cloned() {
+                                app.loading = true;
+                                app.current_index = idx;
+                                app.position_secs = 0.0;
+                                app.duration_secs = track.duration_ms as f64 / 1000.0;
+                                queue.jump_to(idx);
+                                tui.draw(&app)?;
+                                match provider.playable_url(&track).await {
+                                    Ok(yt_url) => match fetch_audio_url(&yt_url).await {
+                                        Ok(audio_url) => {
+                                            while player.try_recv_event().is_some() {}
+                                            if let Err(e) = player.load(&audio_url).await {
+                                                app.set_error(e.to_string());
+                                            }
+                                        }
+                                        Err(e) => app.set_error(e.to_string()),
+                                    },
+                                    Err(e) => app.set_error(e.to_string()),
+                                }
+                                app.loading = false;
+                                skip_position = 5;
+                            }
+                        }
+                    }
+                    KeyCode::Char('n') => app.next_search_match(),
+                    KeyCode::Char('N') => app.prev_search_match(),
+                    KeyCode::Backspace => app.pop_search_char(),
+                    KeyCode::Char(c) => app.push_search_char(c),
+                    _ => {}
+                }
+                continue;
+            }
+
             if app.is_seeking() {
                 match key {
                     KeyCode::Esc => app.cancel_seeking(),
@@ -358,9 +423,8 @@ async fn play_mpv(
             app.clear_error();
             match key {
                 KeyCode::Char('q') => break,
-                KeyCode::Char('g') => {
-                    app.start_seeking();
-                }
+                KeyCode::Char('/') => app.start_search(),
+                KeyCode::Char('g') => app.start_seeking(),
                 KeyCode::Char(' ') => {
                     app.is_paused = !app.is_paused;
                     let res = if app.is_paused {
