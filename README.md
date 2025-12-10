@@ -44,18 +44,30 @@ For Spotify playback:
 ### Build from source
 
 ```bash
-git clone https://github.com/your-username/grit
+git clone https://github.com/pixperk/grit
 cd grit
 cargo build --release
+
+# Add to PATH
+cp target/release/grit ~/.local/bin/
+# or
+sudo cp target/release/grit /usr/local/bin/
+```
+
+### Cargo
+
+```bash
+cargo install --git https://github.com/pixperk/grit
 ```
 
 ### Nix
 
-If you have Nix installed (or on NixOS), you can run it directly:
-
 ```bash
-# Compiles from source, includes dependencies
+# Run directly (compiles from source, includes dependencies)
 nix run github:pixperk/grit
+
+# Or install to profile
+nix profile install github:pixperk/grit
 ```
 
 ### Environment Variables
