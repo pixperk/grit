@@ -10,12 +10,12 @@ grit search "lofi beats"
 grit add 4iV5W9uYEdYUVa79Axb7Rh
 grit commit -m "add chill vibes"
 grit push
-grit play -l 37i9dqef...
+grit play
 ```
 
 ## Features
 
-- **Version Control** - Track playlist changes with git-like commands (init, commit, push, pull, diff, log)
+- **Version Control** - Track playlist changes with git-like commands (init, commit, push, pull, diff, log, switch)
 - **Multi-Provider** - Supports Spotify and YouTube playlists
 - **TUI Player** - Beautiful terminal interface with progress bar, queue, and controls
 - **Synced Lyrics** - Real-time lyrics display via LRCLIB (works with both Spotify and YouTube)
@@ -96,6 +96,8 @@ grit init https://open.spotify.com/playlist/37i9dqef1DX...
 grit init https://youtube.com/playlist?list=PL...
 
 # 3. Play your music
+grit play
+# or
 grit play -l 37i9dqef1DX...
 ```
 
@@ -115,6 +117,7 @@ grit play -l 37i9dqef1DX...
 |---------|-------|-------------|
 | `grit init <url>` | `i` | Start tracking a playlist |
 | `grit playlists [query]` | | List all tracked playlists |
+| `grit switch <id>` | | Switch working playlist |
 | `grit list` | `ls` | List tracks in playlist |
 | `grit find <query>` | | Search within playlist |
 
@@ -145,8 +148,8 @@ grit play -l 37i9dqef1DX...
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `grit play -l <id>` | `p` | Start TUI player |
-| `grit play -l <id> --shuffle` | | Start with shuffle enabled |
+| `grit play` | `p` | Start TUI player |
+| `grit play --shuffle` | | Start with shuffle enabled |
 
 ## TUI Controls
 
@@ -218,34 +221,34 @@ grit play -l 37i9dqef1DX...
 grit search "daft punk get lucky"
 
 # Add by track ID (shown in search results)
-grit add 2Foc5Q5nqNiosCNqttzHof -l myplaylist
+grit add 2Foc5Q5nqNiosCNqttzHof
 
 # Commit and push
 grit commit -m "add daft punk"
-grit push -l myplaylist
+grit push
 ```
 
 ### Sync changes from remote
 
 ```bash
 # Check if remote has changes
-grit status -l myplaylist
+grit status
 
 # Pull remote changes
-grit pull -l myplaylist
+grit pull
 
 # View what changed
-grit log -l myplaylist
+grit log
 ```
 
 ### Reorder tracks
 
 ```bash
 # Find current position
-grit list -l myplaylist
+grit list
 
 # Move track to new position (0-based index)
-grit move 4iV5W9uYEdYUVa79Axb7Rh 0 -l myplaylist
+grit move 4iV5W9uYEdYUVa79Axb7Rh 0
 
 # Commit and push
 grit commit -m "move track to top"
@@ -269,6 +272,7 @@ grit revert a1b2c3d4
 
 ```
 .grit/
+├── working_playlist      # Current working playlist ID
 ├── config.toml           # Global settings
 ├── credentials/          # Encrypted OAuth tokens
 │   ├── spotify.json
