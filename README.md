@@ -22,6 +22,8 @@ grit play
 - **Staging Area** - Stage changes before committing (add, remove, move tracks)
 - **Offline-First** - Local state with on-demand remote sync
 - **Live Reload** - TUI updates when playlist file changes externally
+- **Resume Playback** - Remembers last played track and resumes from there
+- **Device Selection** - Choose Spotify playback device when multiple are available
 
 ## Installation
 
@@ -118,6 +120,7 @@ grit play -l 37i9dqef1DX...
 | `grit init <url>` | `i` | Start tracking a playlist |
 | `grit playlists [query]` | | List all tracked playlists |
 | `grit switch <id>` | | Switch working playlist |
+| `grit curr` | | Show current working playlist info |
 | `grit list` | `ls` | List tracks in playlist |
 | `grit find <query>` | | Search within playlist |
 
@@ -149,8 +152,10 @@ grit play -l 37i9dqef1DX...
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `grit play` | `p` | Start TUI player |
+| `grit play` | `p` | Start TUI player (resumes from last track) |
 | `grit play --shuffle` | | Start with shuffle enabled |
+
+Playback automatically resumes from where you left off. The last played track is saved when you quit.
 
 ## TUI Controls
 
@@ -276,8 +281,7 @@ grit revert a1b2c3d4
 
 ```
 .grit/
-├── working_playlist      # Current working playlist ID
-├── config.toml           # Global settings
+├── working_playlist.json # Current playlist ID + last track index
 ├── credentials/          # Encrypted OAuth tokens
 │   ├── spotify.json
 │   └── youtube.json
@@ -297,6 +301,7 @@ grit revert a1b2c3d4
 - Requires an active Spotify device (desktop app, phone, web player)
 - Premium account required for playback control
 - Write access requires playlist ownership
+- Prompts for device selection when multiple devices are available
 
 ### YouTube
 - Uses mpv + yt-dlp for playback
